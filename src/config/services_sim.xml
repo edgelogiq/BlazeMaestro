@@ -1,0 +1,198 @@
+<?xml version='1.0' encoding='utf-8'?>
+<services>
+  <service id="blazeconfig">
+    <placement type="node_lock" node="fog-cpu3" />
+    <containers>
+      <container id="blazeconfig-main" cpu="0.1" ram_gb="0.2" />
+    </containers>
+    <instances>
+      <container pod_name="blazeconfig-57df7cd8fc-2hh96" id="blazeconfig-57df7cd8fc-2hh96" node="fog-cpu3" layer="fog" cpu_usage_min="0.011" cpu_usage_max="0.189" cpu_usage_last="0.023" ram_usage_min_gb="0.110" ram_usage_max_gb="0.111" ram_usage_last_gb="0.111" />
+      <container pod_name="blazeconfig-worker-844c5b9488-qn8lc" id="blazeconfig-worker-844c5b9488-qn8lc" node="fog-cpu3" layer="fog" cpu_usage_min="0.054" cpu_usage_max="0.054" cpu_usage_last="0.054" ram_usage_min_gb="0.114" ram_usage_max_gb="0.114" ram_usage_last_gb="0.114" />
+    </instances>
+  </service>
+  <service id="blazeconfig-worker">
+    <placement type="multi-layer" layers="edge,fog">
+      <layer-rules>
+        <layer id="edge" type="daemonset" />
+        <layer id="fog" type="node_lock" node="fog-cpu3" replicas="1" />
+      </layer-rules>
+    </placement>
+    <containers>
+      <container id="blazeconfig-worker-main" cpu="0.1" ram_gb="0.2" />
+    </containers>
+    <instances>
+      <container pod_name="blazeconfig-worker-daemonset-75bkc" node="edge-gpu2" layer="edge" cpu_usage_min="0.009" cpu_usage_max="0.018" cpu_usage_last="0.017" ram_usage_min_gb="0.055" ram_usage_max_gb="0.061" ram_usage_last_gb="0.061" />
+      <container pod_name="blazeconfig-worker-daemonset-klwv6" node="edge-cpu4" layer="edge" cpu_usage_min="0.007" cpu_usage_max="0.017" cpu_usage_last="0.009" ram_usage_min_gb="0.051" ram_usage_max_gb="0.061" ram_usage_last_gb="0.061" />
+      <container pod_name="blazeconfig-worker-daemonset-mrg2m" node="edge-cpu3" layer="edge" cpu_usage_min="0.017" cpu_usage_max="0.027" cpu_usage_last="0.026" ram_usage_min_gb="0.053" ram_usage_max_gb="0.064" ram_usage_last_gb="0.064" />
+      <container pod_name="blazeconfig-worker-daemonset-wwld4" node="edge-cpu2" layer="edge" cpu_usage_min="0.019" cpu_usage_max="0.033" cpu_usage_last="0.032" ram_usage_min_gb="0.053" ram_usage_max_gb="0.059" ram_usage_last_gb="0.059" />
+      <container pod_name="blazeconfig-worker-daemonset-kv7n9" node="edge-gpu1" layer="edge" cpu_usage_min="0.009" cpu_usage_max="0.030" cpu_usage_last="0.030" ram_usage_min_gb="0.053" ram_usage_max_gb="0.063" ram_usage_last_gb="0.063" />
+      <container pod_name="blazeconfig-worker-844c5b9488-qn8lc" id="blazeconfig-worker-844c5b9488-qn8lc" node="fog-cpu3" layer="fog" cpu_usage_min="0.024" cpu_usage_max="0.189" cpu_usage_last="0.054" ram_usage_min_gb="0.114" ram_usage_max_gb="0.115" ram_usage_last_gb="0.114" />
+      <container pod_name="blazeconfig-worker-daemonset-54t26" id="blazeconfig-worker-daemonset-54t26" node="frank-2" layer="edge" cpu_usage_min="0.008" cpu_usage_max="0.020" cpu_usage_last="0.018" ram_usage_min_gb="0.054" ram_usage_max_gb="0.055" ram_usage_last_gb="0.055" />
+    </instances>
+  </service>
+  <service id="blazeflow">
+    <placement type="multi-layer" layers="edge,fog">
+      <layer-rules>
+        <layer id="edge" type="daemonset" />
+        <layer id="fog" type="node_lock" node="fog-gpu3" replicas="1" />
+      </layer-rules>
+    </placement>
+    <containers>
+      <container id="blazeflow-main" cpu="0.00" ram_gb="0.02" />
+    </containers>
+    <instances>
+      <container pod_name="blazeflow-68fc945876-mwnn9" id="blazeflow-68fc945876-mwnn9" node="fog-gpu3" layer="fog" cpu_usage_min="0.039" cpu_usage_max="0.926" cpu_usage_last="0.844" ram_usage_min_gb="0.089" ram_usage_max_gb="0.112" ram_usage_last_gb="0.112" />
+      <container pod_name="blazeflow-daemonset-6vmvt" id="blazeflow-daemonset-6vmvt" node="edge-gpu2" layer="edge" cpu_usage_min="0.003" cpu_usage_max="1.001" cpu_usage_last="0.008" ram_usage_min_gb="0.034" ram_usage_max_gb="0.035" ram_usage_last_gb="0.035" />
+      <container pod_name="blazeflow-daemonset-pnrgz" id="blazeflow-daemonset-pnrgz" node="edge-gpu1" layer="edge" cpu_usage_min="0.002" cpu_usage_max="0.028" cpu_usage_last="0.015" ram_usage_min_gb="0.034" ram_usage_max_gb="0.037" ram_usage_last_gb="0.037" />
+      <container pod_name="blazeflow-daemonset-robot-vhtqb" id="blazeflow-daemonset-robot-vhtqb" node="frank-2" layer="edge" cpu_usage_min="0.002" cpu_usage_max="1.038" cpu_usage_last="0.956" ram_usage_min_gb="0.037" ram_usage_max_gb="0.056" ram_usage_last_gb="0.055" />
+      <container pod_name="blazeflow-daemonset-wz6p2" id="blazeflow-daemonset-wz6p2" node="edge-cpu3" layer="edge" cpu_usage_min="0.004" cpu_usage_max="0.026" cpu_usage_last="0.009" ram_usage_min_gb="0.034" ram_usage_max_gb="0.035" ram_usage_last_gb="0.035" />
+      <container pod_name="blazeflow-8cd88cbc6-7fkxc" id="blazeflow-8cd88cbc6-7fkxc" node="cloud-gpu2" layer="cloud" cpu_usage_min="0.034" cpu_usage_max="1.057" cpu_usage_last="0.447" ram_usage_min_gb="0.080" ram_usage_max_gb="0.081" ram_usage_last_gb="0.081" />
+      <container pod_name="blazeflow-daemonset-5496c" id="blazeflow-daemonset-5496c" node="edge-cpu4" layer="edge" cpu_usage_min="0.002" cpu_usage_max="0.024" cpu_usage_last="0.008" ram_usage_min_gb="0.037" ram_usage_max_gb="0.038" ram_usage_last_gb="0.038" />
+      <container pod_name="blazeflow-daemonset-fv4mp" id="blazeflow-daemonset-fv4mp" node="edge-cpu2" layer="edge" cpu_usage_min="0.003" cpu_usage_max="0.033" cpu_usage_last="0.011" ram_usage_min_gb="0.034" ram_usage_max_gb="0.035" ram_usage_last_gb="0.035" />
+    </instances>
+  </service>
+  <service id="blazemonitoring">
+    <placement type="multi-layer" layers="edge,fog">
+      <layer-rules>
+        <layer id="edge" type="daemonset" />
+        <layer id="fog" type="daemonset" />
+      </layer-rules>
+    </placement>
+    <containers>
+      <container id="blazemonitoring-main" cpu="0.1" ram_gb="0.2" />
+    </containers>
+    <instances>
+      <container pod_name="blazemonitoring-cpu-daemonset-dm8s9" id="blazemonitoring-cpu-daemonset-dm8s9" node="fog-cpu5" layer="fog" cpu_usage_min="0.050" cpu_usage_max="0.199" cpu_usage_last="0.112" ram_usage_min_gb="0.076" ram_usage_max_gb="0.095" ram_usage_last_gb="0.095" />
+      <container pod_name="blazemonitoring-gpu-daemonset-lt67z" id="blazemonitoring-gpu-daemonset-lt67z" node="fog-gpu3" layer="fog" cpu_usage_min="0.022" cpu_usage_max="0.900" cpu_usage_last="0.062" ram_usage_min_gb="0.097" ram_usage_max_gb="0.111" ram_usage_last_gb="0.110" />
+      <container pod_name="blazemonitoring-gpu-daemonset-m6cm4" id="blazemonitoring-gpu-daemonset-m6cm4" node="fog-gpu1" layer="fog" cpu_usage_min="0.054" cpu_usage_max="0.201" cpu_usage_last="0.134" ram_usage_min_gb="0.077" ram_usage_max_gb="0.098" ram_usage_last_gb="0.098" />
+      <container pod_name="blazemonitoring-cpu-daemonset-c8mm6" id="blazemonitoring-cpu-daemonset-c8mm6" node="edge-cpu3" layer="edge" cpu_usage_min="0.006" cpu_usage_max="0.039" cpu_usage_last="0.013" ram_usage_min_gb="0.052" ram_usage_max_gb="0.059" ram_usage_last_gb="0.059" />
+      <container pod_name="blazemonitoring-cpu-daemonset-gqf2k" id="blazemonitoring-cpu-daemonset-gqf2k" node="edge-cpu4" layer="edge" cpu_usage_min="0.003" cpu_usage_max="0.033" cpu_usage_last="0.007" ram_usage_min_gb="0.057" ram_usage_max_gb="0.064" ram_usage_last_gb="0.064" />
+      <container pod_name="blazemonitoring-jetson-daemonset-dh26s" id="blazemonitoring-jetson-daemonset-dh26s" node="edge-gpu1" layer="edge" cpu_usage_min="0.007" cpu_usage_max="0.998" cpu_usage_last="0.032" ram_usage_min_gb="0.050" ram_usage_max_gb="0.069" ram_usage_last_gb="0.069" />
+      <container pod_name="blazemonitoring-jetson-daemonset-jz9g5" id="blazemonitoring-jetson-daemonset-jz9g5" node="frank-2" layer="edge" cpu_usage_min="0.017" cpu_usage_max="0.757" cpu_usage_last="0.027" ram_usage_min_gb="0.051" ram_usage_max_gb="0.065" ram_usage_last_gb="0.065" />
+      <container pod_name="blazemonitoring-cpu-daemonset-9wpzd" id="blazemonitoring-cpu-daemonset-9wpzd" node="cloud-cpu5" layer="cloud" cpu_usage_min="0.000" cpu_usage_max="0.112" cpu_usage_last="0.027" ram_usage_min_gb="0.086" ram_usage_max_gb="0.099" ram_usage_last_gb="0.097" />
+      <container pod_name="blazemonitoring-cpu-daemonset-bgqfp" id="blazemonitoring-cpu-daemonset-bgqfp" node="cloud-cpu4" layer="cloud" cpu_usage_min="0.000" cpu_usage_max="0.063" cpu_usage_last="0.040" ram_usage_min_gb="0.084" ram_usage_max_gb="0.098" ram_usage_last_gb="0.098" />
+      <container pod_name="blazemonitoring-cpu-daemonset-lttl9" id="blazemonitoring-cpu-daemonset-lttl9" node="cloud-cpu3" layer="cloud" cpu_usage_min="0.029" cpu_usage_max="0.087" cpu_usage_last="0.077" ram_usage_min_gb="0.072" ram_usage_max_gb="0.085" ram_usage_last_gb="0.085" />
+      <container pod_name="blazemonitoring-gpu-daemonset-pvvkt" id="blazemonitoring-gpu-daemonset-pvvkt" node="cloud-gpu1" layer="cloud" cpu_usage_min="0.000" cpu_usage_max="0.087" cpu_usage_last="0.065" ram_usage_min_gb="0.077" ram_usage_max_gb="0.091" ram_usage_last_gb="0.091" />
+      <container pod_name="blazemonitoring-cpu-daemonset-4rstx" id="blazemonitoring-cpu-daemonset-4rstx" node="fog-cpu2" layer="fog" cpu_usage_min="0.017" cpu_usage_max="0.334" cpu_usage_last="0.059" ram_usage_min_gb="0.072" ram_usage_max_gb="0.090" ram_usage_last_gb="0.090" />
+      <container pod_name="blazemonitoring-cpu-daemonset-ssppk" id="blazemonitoring-cpu-daemonset-ssppk" node="fog-cpu3" layer="fog" cpu_usage_min="0.021" cpu_usage_max="0.189" cpu_usage_last="0.064" ram_usage_min_gb="0.085" ram_usage_max_gb="0.101" ram_usage_last_gb="0.101" />
+      <container pod_name="blazemonitoring-cpu-daemonset-ntqmp" id="blazemonitoring-cpu-daemonset-ntqmp" node="edge-cpu2" layer="edge" cpu_usage_min="0.002" cpu_usage_max="0.055" cpu_usage_last="0.011" ram_usage_min_gb="0.052" ram_usage_max_gb="0.059" ram_usage_last_gb="0.059" />
+      <container pod_name="blazemonitoring-gpu-daemonset-gtw2z" id="blazemonitoring-gpu-daemonset-gtw2z" node="cloud-gpu2" layer="cloud" cpu_usage_min="0.015" cpu_usage_max="1.057" cpu_usage_last="0.039" ram_usage_min_gb="0.090" ram_usage_max_gb="0.108" ram_usage_last_gb="0.107" />
+      <container pod_name="blazemonitoring-gpu-daemonset-gxfpf" id="blazemonitoring-gpu-daemonset-gxfpf" node="fog-gpu2" layer="fog" cpu_usage_min="0.052" cpu_usage_max="0.224" cpu_usage_last="0.133" ram_usage_min_gb="0.081" ram_usage_max_gb="0.101" ram_usage_last_gb="0.101" />
+      <container pod_name="blazemonitoring-jetson-daemonset-lnx8d" id="blazemonitoring-jetson-daemonset-lnx8d" node="edge-gpu2" layer="edge" cpu_usage_min="0.013" cpu_usage_max="1.001" cpu_usage_last="0.019" ram_usage_min_gb="0.049" ram_usage_max_gb="0.059" ram_usage_last_gb="0.059" />
+    </instances>
+  </service>
+  <service id="blazemonitoring-deployment" exclude_from_orchestration="true">
+    <placement type="flexible" />
+    <containers>
+      <container id="blazemonitoring-deployment-main" cpu="0.1" ram_gb="0.2" />
+    </containers>
+  </service>
+  <service id="dds-discovery-server">
+    <placement type="node_lock" node="fog-cpu2" />
+    <containers>
+      <container id="dds-discovery-server-main" cpu="0.1" ram_gb="0.2" />
+    </containers>
+    <instances>
+      <container pod_name="dds-discovery-server-6c44cbb569-s9djx" node="fog-gpu3" layer="fog" cpu_usage_min="0.004" cpu_usage_max="0.014" cpu_usage_last="0.006" ram_usage_min_gb="0.012" ram_usage_max_gb="0.012" ram_usage_last_gb="0.012" />
+      <container pod_name="dds-discovery-server-5cbd6df8b9-9pwhn" id="dds-discovery-server-5cbd6df8b9-9pwhn" node="fog-cpu2" layer="fog" cpu_usage_min="0.002" cpu_usage_max="0.334" cpu_usage_last="0.006" ram_usage_min_gb="0.013" ram_usage_max_gb="0.013" ram_usage_last_gb="0.013" />
+    </instances>
+  </service>
+  <service id="robot-slam" metrics_service_name="robot-slam">
+    <placement type="multi-layer" layers="edge,fog">
+      <layer-rules>
+        <layer id="edge" type="flexible" replicas="1" />
+        <layer id="fog" type="flexible" replicas="1" />
+      </layer-rules>
+    </placement>
+    <dependencies>
+      <dependency service="p3at-robot" />
+    </dependencies>
+    <containers>
+      <container id="robot-slam-main" cpu="0.1" ram_gb="0.2" />
+    </containers>
+    <instances>
+      <container pod_name="robot-slam-eth0-85bf88cb7c-kj9kz" node="edge-gpu2" layer="edge" cpu_usage_min="0.410" cpu_usage_max="0.701" cpu_usage_last="0.701" ram_usage_min_gb="0.149" ram_usage_max_gb="0.154" ram_usage_last_gb="0.154" exec_time="0.044800" execution_rate_hz="7.48" />
+      <container pod_name="robot-slam-eth0-7cd68b5d6-vbv5d" node="edge-gpu1" layer="edge" cpu_usage_min="0.531" cpu_usage_max="0.819" cpu_usage_last="0.819" ram_usage_min_gb="0.150" ram_usage_max_gb="0.157" ram_usage_last_gb="0.157" exec_time="0.058638" execution_rate_hz="7.49" />
+      <container pod_name="robot-slam-eth0-f9ffd6b8d-wr42x" node="edge-cpu3" layer="edge" cpu_usage_min="0.433" cpu_usage_max="0.683" cpu_usage_last="0.683" ram_usage_min_gb="0.150" ram_usage_max_gb="0.156" ram_usage_last_gb="0.156" exec_time="0.049743" execution_rate_hz="7.48" />
+      <container pod_name="robot-slam-eth0-775b5c76f-n7zfs" node="edge-cpu2" layer="edge" cpu_usage_min="0.543" cpu_usage_max="0.720" cpu_usage_last="0.720" ram_usage_min_gb="0.151" ram_usage_max_gb="0.151" ram_usage_last_gb="0.151" exec_time="0.048356" execution_rate_hz="7.49" />
+      <container pod_name="robot-slam-789c68c568-tr7bv" node="frank-2" layer="edge" cpu_usage_min="0.017" cpu_usage_max="0.781" cpu_usage_last="0.780" ram_usage_min_gb="0.154" ram_usage_max_gb="0.169" ram_usage_last_gb="0.169" exec_time="0.054629" execution_rate_hz="7.49" />
+      <container pod_name="robot-slam-85df457c94-5cttc" node="fog-cpu2" layer="fog" cpu_usage_min="0.049" cpu_usage_max="0.514" cpu_usage_last="0.276" ram_usage_min_gb="0.238" ram_usage_max_gb="0.242" ram_usage_last_gb="0.242" exec_time="0.051287" execution_rate_hz="7.49" />
+      <container pod_name="robot-slam-5bb449dbdc-s9b7h" node="fog-cpu3" layer="fog" cpu_usage_min="0.039" cpu_usage_max="0.313" cpu_usage_last="0.091" ram_usage_min_gb="0.167" ram_usage_max_gb="0.169" ram_usage_last_gb="0.169" exec_time="0.005596" execution_rate_hz="7.51" />
+      <container pod_name="robot-slam-6dc86958d5-jtsdz" node="fog-cpu5" layer="fog" cpu_usage_min="0.179" cpu_usage_max="0.408" cpu_usage_last="0.179" ram_usage_min_gb="0.156" ram_usage_max_gb="0.161" ram_usage_last_gb="0.161" exec_time="0.048605" execution_rate_hz="7.49" />
+      <container pod_name="robot-slam-6c5b98f6b9-mbvpw" node="fog-gpu1" layer="fog" cpu_usage_min="0.192" cpu_usage_max="0.463" cpu_usage_last="0.192" ram_usage_min_gb="0.165" ram_usage_max_gb="0.172" ram_usage_last_gb="0.172" exec_time="0.054038" execution_rate_hz="7.48" />
+      <container pod_name="robot-slam-85cf4676d6-5f9nf" node="fog-gpu2" layer="fog" cpu_usage_min="0.189" cpu_usage_max="0.462" cpu_usage_last="0.256" ram_usage_min_gb="0.188" ram_usage_max_gb="0.194" ram_usage_last_gb="0.194" exec_time="0.056762" execution_rate_hz="7.49" />
+      <container pod_name="robot-slam-855f6b9ff9-47k5p" node="fog-gpu3" layer="fog" cpu_usage_min="0.225" cpu_usage_max="0.580" cpu_usage_last="0.580" ram_usage_min_gb="0.162" ram_usage_max_gb="0.164" ram_usage_last_gb="0.164" exec_time="0.071046" execution_rate_hz="7.49" />
+      <container pod_name="robot-slam-7849dd74b5-vzb6t" node="cloud-cpu3" layer="cloud" cpu_usage_min="0.199" cpu_usage_max="0.328" cpu_usage_last="0.328" ram_usage_min_gb="0.156" ram_usage_max_gb="0.159" ram_usage_last_gb="0.159" exec_time="0.039090" execution_rate_hz="7.50" />
+      <container pod_name="robot-slam-eth0-78c5dcb554-5bnbd" id="robot-slam-eth0-78c5dcb554-5bnbd" node="edge-cpu4" layer="edge" cpu_usage_min="0.303" cpu_usage_max="0.631" cpu_usage_last="0.367" ram_usage_min_gb="0.185" ram_usage_max_gb="0.237" ram_usage_last_gb="0.237" exec_time="0.059104" execution_rate_hz="7.29" />
+    </instances>
+  </service>
+  <service id="pure-pursuit" metrics_service_name="pure-pursuit" control_loop="true" exclude_from_orchestration="true">
+    <placement type="flexible" node="edge-gpu1" />
+    <dependencies>
+      <dependency service="robot-slam" />
+    </dependencies>
+    <containers>
+      <container id="pure-pursuit-main" cpu="0.1" ram_gb="0.2" />
+    </containers>
+    <instances>
+      <container pod_name="pure-pursuit-789c68c568-tr7bv" node="frank-2" layer="edge" cpu_usage_min="0.017" cpu_usage_max="0.781" cpu_usage_last="0.780" ram_usage_min_gb="0.154" ram_usage_max_gb="0.169" ram_usage_last_gb="0.169" exec_time="0.054629" execution_rate_hz="7.49" />
+      <container pod_name="pure-pursuit-5864768774-mclpj" id="pure-pursuit-5864768774-mclpj" node="edge-gpu1" layer="edge" cpu_usage_min="0.771" cpu_usage_max="0.771" cpu_usage_last="0.771" ram_usage_min_gb="0.107" ram_usage_max_gb="0.107" ram_usage_last_gb="0.107" />
+    </instances>
+  </service>
+  <service id="p3at-robot" metrics_service_name="p3at-robot">
+    <placement type="node_lock" node="frank-2" />
+    <dependencies>
+      <dependency service="pure-pursuit" blocking="false" feedback="true" />
+      <dependency service="emergency-stop-service" blocking="false" feedback="true" constraint_level="soft" />
+    </dependencies>
+    <containers>
+      <container id="p3at-robot-container" cpu="0.60" ram_gb="1.20" />
+    </containers>
+    <instances>
+      <container pod_name="p3at-robot-85666f5556-f9vxs" id="p3at-robot-85666f5556-f9vxs" node="frank-2" layer="edge" cpu_usage_min="0.017" cpu_usage_max="1.037" cpu_usage_last="0.838" ram_usage_min_gb="0.168" ram_usage_max_gb="0.183" ram_usage_last_gb="0.177" exec_time="0.014143" execution_rate_hz="7.43" />
+    </instances>
+  </service>
+  <service id="robot-localization" metrics_service_name="robot-localization">
+    <placement type="flexible" node="edge-gpu1" />
+    <dependencies>
+      <dependency service="p3at-robot" />
+    </dependencies>
+    <containers>
+      <container id="robot-localization-container" cpu="0.60" ram_gb="1.20" />
+    </containers>
+    <instances>
+      <container pod_name="robot-localization-eth0-5488754cf6-wj8v9" node="edge-gpu2" layer="edge" cpu_usage_min="0.432" cpu_usage_max="0.670" cpu_usage_last="0.466" ram_usage_min_gb="0.081" ram_usage_max_gb="0.081" ram_usage_last_gb="0.081" exec_time="0.009044" execution_rate_hz="20.01" />
+      <container pod_name="robot-localization-eth0-684bc476fd-n4mgm" node="edge-cpu4" layer="edge" cpu_usage_min="0.222" cpu_usage_max="0.308" cpu_usage_last="0.286" ram_usage_min_gb="0.081" ram_usage_max_gb="0.081" ram_usage_last_gb="0.081" exec_time="0.003560" execution_rate_hz="19.94" />
+      <container pod_name="robot-localization-eth0-78644c694f-g7tjk" node="edge-cpu3" layer="edge" cpu_usage_min="0.502" cpu_usage_max="0.763" cpu_usage_last="0.586" ram_usage_min_gb="0.111" ram_usage_max_gb="0.121" ram_usage_last_gb="0.121" exec_time="0.006898" execution_rate_hz="20.01" />
+      <container pod_name="robot-localization-eth0-64c7b966cb-fwwvn" node="edge-cpu2" layer="edge" cpu_usage_min="0.447" cpu_usage_max="0.692" cpu_usage_last="0.662" ram_usage_min_gb="0.109" ram_usage_max_gb="0.118" ram_usage_last_gb="0.118" exec_time="0.007489" execution_rate_hz="20.03" />
+      <container pod_name="robot-localization-cdb778b49-r7hfk" node="frank-2" layer="edge" cpu_usage_min="0.017" cpu_usage_max="1.798" cpu_usage_last="0.709" ram_usage_min_gb="0.082" ram_usage_max_gb="0.082" ram_usage_last_gb="0.082" exec_time="0.009239" execution_rate_hz="20.02" />
+      <container pod_name="robot-localization-57887dd46f-f7mrl" node="fog-gpu3" layer="fog" cpu_usage_min="0.031" cpu_usage_max="0.216" cpu_usage_last="0.082" ram_usage_min_gb="0.096" ram_usage_max_gb="0.096" ram_usage_last_gb="0.096" exec_time="0.007672" execution_rate_hz="19.94" />
+      <container pod_name="robot-localization-658fb84569-42ncl" node="fog-gpu2" layer="fog" cpu_usage_min="0.118" cpu_usage_max="0.302" cpu_usage_last="0.118" ram_usage_min_gb="0.100" ram_usage_max_gb="0.102" ram_usage_last_gb="0.102" exec_time="0.010786" execution_rate_hz="20.03" />
+      <container pod_name="robot-localization-9d86d95bb-wgzpj" node="fog-gpu1" layer="fog" cpu_usage_min="0.145" cpu_usage_max="0.303" cpu_usage_last="0.145" ram_usage_min_gb="0.118" ram_usage_max_gb="0.118" ram_usage_last_gb="0.118" exec_time="0.011433" execution_rate_hz="19.94" />
+      <container pod_name="robot-localization-fb5d7499d-rf8fx" node="fog-cpu5" layer="fog" cpu_usage_min="0.089" cpu_usage_max="0.259" cpu_usage_last="0.123" ram_usage_min_gb="0.094" ram_usage_max_gb="0.095" ram_usage_last_gb="0.095" exec_time="0.009146" execution_rate_hz="20.01" />
+      <container pod_name="robot-localization-59bb865f6-44zjf" node="fog-cpu3" layer="fog" cpu_usage_min="0.072" cpu_usage_max="0.165" cpu_usage_last="0.072" ram_usage_min_gb="0.113" ram_usage_max_gb="0.113" ram_usage_last_gb="0.113" exec_time="0.005893" execution_rate_hz="20.02" />
+      <container pod_name="robot-localization-6496b5c469-zqgz9" node="fog-cpu2" layer="fog" cpu_usage_min="0.055" cpu_usage_max="0.309" cpu_usage_last="0.281" ram_usage_min_gb="0.095" ram_usage_max_gb="0.096" ram_usage_last_gb="0.096" exec_time="0.005643" execution_rate_hz="20.03" />
+      <container pod_name="robot-localization-56cc5c59df-88b5w" node="cloud-cpu3" layer="cloud" cpu_usage_min="0.073" cpu_usage_max="0.139" cpu_usage_last="0.130" ram_usage_min_gb="0.101" ram_usage_max_gb="0.102" ram_usage_last_gb="0.102" exec_time="0.004503" execution_rate_hz="19.99" />
+      <container pod_name="robot-localization-eth0-7c6957d6-6pmwt" id="robot-localization-eth0-7c6957d6-6pmwt" node="edge-gpu1" layer="edge" cpu_usage_min="0.476" cpu_usage_max="0.775" cpu_usage_last="0.764" ram_usage_min_gb="0.088" ram_usage_max_gb="0.094" ram_usage_last_gb="0.094" exec_time="0.011187" execution_rate_hz="20.02" />
+    </instances>
+  </service>
+  <service id="emergency-stop-service" metrics_service_name="emergency-stop-service">
+    <placement type="flexible" node="fog-gpu2" />
+    <dependencies>
+      <dependency service="p3at-robot" blocking="false" size_mb="0.5" constraint_level="soft" />
+    </dependencies>
+    <containers>
+      <container id="emergency-stop-service-main" cpu="0.1" ram_gb="0.2" gpu="1.0" />
+    </containers>
+    <instances>
+      <container pod_name="emergency-stop-service-7c5dd4bb7-lwn4j" id="emergency-stop-service-7c5f13bb7-lwn4j" node="fog-gpu1" layer="fog" cpu_usage_min="0.417" cpu_usage_max="1.056" cpu_usage_last="0.417" ram_usage_min_gb="0.405" ram_usage_max_gb="0.440" ram_usage_last_gb="0.406" exec_time="0.04337" execution_rate_hz="7.2" />
+      <container pod_name="emergency-stop-service-6559746d7d-cq9gr" id="emergency-stop-service-6559746d7d-cq9gr" node="fog-gpu3" layer="fog" cpu_usage_min="0.518" cpu_usage_max="1.203" cpu_usage_last="0.518" ram_usage_min_gb="0.477" ram_usage_max_gb="0.522" ram_usage_last_gb="0.521" exec_time="0.03837" execution_rate_hz="7.3" />
+      <container pod_name="emergency-stop-service-7f9764bd5b-hvrcx" id="emergency-stop-service-7f9764bd5b-hvrcx" node="cloud-gpu1" layer="cloud" cpu_usage_min="0.043" cpu_usage_max="0.190" cpu_usage_last="0.043" ram_usage_min_gb="0.413" ram_usage_max_gb="0.448" ram_usage_last_gb="0.448" exec_time="0.03337" execution_rate_hz="7.2" />
+      <container pod_name="emergency-stop-service-6fdb7fb455-glcj2" id="emergency-stop-service-6fdb7fb455-glcj2" node="cloud-gpu2" layer="cloud" cpu_usage_min="0.178" cpu_usage_max="0.877" cpu_usage_last="0.847" ram_usage_min_gb="0.397" ram_usage_max_gb="0.447" ram_usage_last_gb="0.419" exec_time="0.03069" execution_rate_hz="7.1" />
+      <container pod_name="emergency-stop-service-5f796557fc-jjcmb" id="emergency-stop-service-5f796557fc-jjcmb" node="frank-2" layer="edge" cpu_usage_min="1.460" cpu_usage_max="1.966" cpu_usage_last="1.966" ram_usage_min_gb="0.669" ram_usage_max_gb="0.669" ram_usage_last_gb="0.669" exec_time="0.73607" execution_rate_hz="30.0" />
+      <container pod_name="emergency-stop-service-eth0-55d5f846cf-297qb" id="emergency-stop-service-eth0-55d5f846cf-297qb" node="edge-gpu1" layer="edge" cpu_usage_min="1.504" cpu_usage_max="1.837" cpu_usage_last="1.799" ram_usage_min_gb="0.398" ram_usage_max_gb="0.430" ram_usage_last_gb="0.398" exec_time="0.52493" execution_rate_hz="30.0" />
+      <container pod_name="emergency-stop-service-eth0-8658bd766b-h8bs2" id="emergency-stop-service-eth0-8658bd766b-h8bs2" node="edge-gpu2" layer="edge" cpu_usage_min="1.013" cpu_usage_max="1.529" cpu_usage_last="1.529" ram_usage_min_gb="0.406" ram_usage_max_gb="0.406" ram_usage_last_gb="0.406" exec_time="0.19491" execution_rate_hz="30.0" />
+      <container pod_name="emergency-stop-service-59656758cd-qxzqw" id="emergency-stop-service-59656758cd-qxzqw" node="fog-gpu2" layer="fog" cpu_usage_min="0.087" cpu_usage_max="1.056" cpu_usage_last="0.146" ram_usage_min_gb="0.403" ram_usage_max_gb="0.440" ram_usage_last_gb="0.439" exec_time="0.043370" execution_rate_hz="7.10" />
+    </instances>
+  </service>
+</services>

@@ -1,0 +1,14 @@
+{
+  "serviceId": "MAESTRO_SERVICE",
+  "serviceName": "BlazeMaestro",
+  "serviceConfig": {
+    "parameters": {
+        "configFile": "/home/cmelancon/dev/BlazeAIoT/maestro/src/config/blaze_maestro.yaml",
+        "logger": {
+            "loggerName": "BlazeMaestro",
+            "logFilename": "logs/maestro.log",
+            "logLevel": "INFO"
+        }
+    }
+  }
+}

@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Blaze Services Configuration
+
+    This file defines the services for the Blaze infrastructure and robotics scenario.
+    It demonstrates all placement strategies: layer_lock, node_lock, daemonset, and flexible.
+-->
+<services>
+
+    <!-- ===================================================================
+         INFRASTRUCTURE SERVICES
+         =================================================================== -->
+
+    <!-- BlazeConfigMain: Central configuration server (cloud only) -->
+    <service id="blaze-config-main" execution_rate_hz="1.0">
+        <placement type="layer_lock" layer="cloud" />
+        <containers>
+            <container id="config-server" cpu="2.0" ram_gb="4.0" exec_time="0.01" />
+        </containers>
+    </service>
+
+    <!-- BlazeConfigWorker: Cloud instance -->
+    <service id="blaze-config-worker-cloud" execution_rate_hz="2.0">
+        <placement type="layer_lock" layer="cloud" />
+        <containers>
+            <container id="config-worker" cpu="1.0" ram_gb="2.0" exec_time="0.005" />
+        </containers>
+        <dependencies>
+            <dependency service_id="blaze-config-main" size_mb="0.5" />
+        </dependencies>
+    </service>
+
+    <!-- BlazeConfigWorker: Fog instance -->
+    <service id="blaze-config-worker-fog" execution_rate_hz="2.0">
+        <placement type="layer_lock" layer="fog" />
+        <containers>
+            <container id="config-worker" cpu="1.0" ram_gb="2.0" exec_time="0.005" />
+        </containers>
+        <dependencies>
+            <dependency service_id="blaze-config-main" size_mb="0.5" />
+        </dependencies>
+    </service>
+
+    <!-- BlazeConfigWorker: Edge daemonset -->
+    <service id="blaze-config-worker-edge" execution_rate_hz="2.0">
+        <placement type="daemonset" layer="edge" />
+        <containers>
+            <container id="config-worker" cpu="0.5" ram_gb="1.0" exec_time="0.005" />
+        </containers>
+        <dependencies>
+            <dependency service_id="blaze-config-main" size_mb="0.5" />
+        </dependencies>
+    </service>
+
+    <!-- BlazeFlow: Cloud instance -->
+    <service id="blaze-flow-cloud" execution_rate_hz="10.0">
+        <placement type="layer_lock" layer="cloud" />
+        <containers>
+            <container id="flow-orchestrator" cpu="2.0" ram_gb="4.0" exec_time="0.02" />
+        </containers>
+        <dependencies>
+            <dependency service_id="blaze-config-main" size_mb="0.5" />
+        </dependencies>
+    </service>
+
+    <!-- BlazeFlow: Fog instance -->
+    <service id="blaze-flow-fog" execution_rate_hz="10.0">
+        <placement type="layer_lock" layer="fog" />
+        <containers>
+            <container id="flow-orchestrator" cpu="2.0" ram_gb="4.0" exec_time="0.02" />
+        </containers>
+        <dependencies>
+            <dependency service_id="blaze-config-main" size_mb="0.5" />
+        </dependencies>
+    </service>
+
+    <!-- BlazeFlow: Edge daemonset -->
+    <service id="blaze-flow-edge" execution_rate_hz="10.0">
+        <placement type="daemonset" layer="edge" />
+        <containers>
+            <container id="flow-orchestrator" cpu="1.0" ram_gb="2.0" exec_time="0.02" />
+        </containers>
+        <dependencies>
+            <dependency service_id="blaze-config-main" size_mb="0.5" />
+        </dependencies>
+    </service>
+
+    <!-- BlazeMonitor: Cloud daemonset -->
+    <service id="blaze-monitor-cloud" execution_rate_hz="1.0">
+        <placement type="daemonset" layer="cloud" />
+        <containers>
+            <container id="monitor-agent" cpu="0.5" ram_gb="0.5" exec_time="0.01" />
+        </containers>
+    </service>
+
+    <!-- BlazeMonitor: Fog daemonset -->
+    <service id="blaze-monitor-fog" execution_rate_hz="1.0">
+        <placement type="daemonset" layer="fog" />
+        <containers>
+            <container id="monitor-agent" cpu="0.5" ram_gb="0.5" exec_time="0.01" />
+        </containers>
+    </service>
+
+    <!-- BlazeMonitor: Edge daemonset -->
+    <service id="blaze-monitor-edge" execution_rate_hz="1.0">
+        <placement type="daemonset" layer="edge" />
+        <containers>
+            <container id="monitor-agent" cpu="0.3" ram_gb="0.3" exec_time="0.01" />
+        </containers>
+    </service>
+
+    <!-- BlazeMonitor: Mobile daemonset -->
+    <service id="blaze-monitor-mobile" execution_rate_hz="1.0">
+        <placement type="daemonset" layer="mobile" />
+        <containers>
+            <container id="monitor-agent" cpu="0.2" ram_gb="0.2" exec_time="0.01" />
+        </containers>
+    </service>
+
+    <!-- ===================================================================
+         ROBOT SERVICES (P3AT Robot)
+         =================================================================== -->
+
+    <!-- P3ATRobot: Main robot control (locked to frank-1) -->
+    <service id="p3at-robot" execution_rate_hz="50.0">
+        <placement type="node_lock" node="frank-1" />
+        <containers>
+            <container id="robot-controller" cpu="1.0" ram_gb="1.0" exec_time="0.01" />
+        </containers>
+    </service>
+
+    <!-- RobotLocalization: EKF-based localization (flexible) -->
+    <service id="robot-localization" execution_rate_hz="30.0">
+        <placement type="flexible" />
+        <containers>
+            <container id="ekf-localization" cpu="1.5" ram_gb="0.5" exec_time="0.015" />
+        </containers>
+        <dependencies>
+            <dependency service_id="p3at-robot" size_mb="1.0" />
+        </dependencies>
+    </service>
+
+    <!-- RobotSlam: SLAM toolbox (flexible) -->
+    <service id="robot-slam" execution_rate_hz="10.0">
+        <placement type="flexible" />
+        <containers>
+            <container id="slam-toolbox" cpu="2.0" ram_gb="1.5" exec_time="0.05" />
+        </containers>
+        <dependencies>
+            <dependency service_id="p3at-robot" size_mb="2.0" />
+        </dependencies>
+    </service>
+
+    <!-- PurePursuit: Path following (flexible) -->
+    <service id="pure-pursuit" execution_rate_hz="20.0">
+        <placement type="flexible" />
+        <containers>
+            <container id="path-follower" cpu="1.0" ram_gb="0.5" exec_time="0.01" />
+        </containers>
+        <dependencies>
+            <dependency service_id="p3at-robot" size_mb="0.5" />
+            <dependency service_id="robot-slam" size_mb="1.0" />
+        </dependencies>
+    </service>
+
+    <!-- EmergencyStop: Vision-based safety (flexible, needs GPU) -->
+    <service id="emergency-stop" execution_rate_hz="30.0">
+        <placement type="flexible" />
+        <containers>
+            <container id="vision-estop" cpu="2.0" ram_gb="2.0" gpu_gb="2.0" exec_time="0.025" />
+        </containers>
+        <dependencies>
+            <dependency service_id="p3at-robot" size_mb="2.0" />
+        </dependencies>
+    </service>
+
+</services>
+

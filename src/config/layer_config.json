@@ -1,0 +1,73 @@
+{
+  "type": "Fog",
+  "layerId": "6824d0820c7560ee0285a1c2",
+  "layerName": "Fog",
+  "layerConfig": {
+    "parameters": {
+      "brokers": {
+        "inter-layer": {
+          "client": {
+            "domainId": 15,
+            "locatorAddress": "dds-discovery-server.blazeaiot.svc.clusterset.local",
+            "max_bandwidth_mbps": 20,
+            "participantName": "FogBlazeFlowInter"
+          },
+          "type": "Dds"
+        },
+        "intra-layer": {
+          "client": {
+            "bootstrap.servers": "kafka.default.svc.fog.lab:9092",
+            "sasl.mechanism": "PLAIN",
+            "sasl.password": "zCWCHfIbPU",
+            "sasl.username": "user1",
+            "security.protocol": "SASL_PLAINTEXT"
+          },
+          "consumer": {
+            "auto.commit.interval.ms": "1000",
+            "auto.offset.reset": "latest",
+            "bootstrap.servers": "kafka.default.svc.fog.lab:9092",
+            "enable.auto.commit": "true",
+            "fetch.max.bytes": "2097152",
+            "fetch.min.bytes": "1",
+            "heartbeat.interval.ms": "1000",
+            "max.partition.fetch.bytes": "2097152",
+            "message.max.bytes": "1048576",
+            "sasl.mechanism": "PLAIN",
+            "sasl.password": "zCWCHfIbPU",
+            "sasl.username": "user1",
+            "security.protocol": "SASL_PLAINTEXT",
+            "session.timeout.ms": "60000"
+          },
+          "producer": {
+            "acks": "1",
+            "batch.size": "16384",
+            "bootstrap.servers": "kafka.default.svc.fog.lab:9092",
+            "compression.type": "lz4",
+            "linger.ms": "0",
+            "max.in.flight.requests.per.connection": "5",
+            "message.max.bytes": "1048576",
+            "queue.buffering.max.kbytes": "2097152",
+            "queue.buffering.max.messages": "100000",
+            "reconnect.backoff.max.ms": "10000",
+            "reconnect.backoff.ms": "1000",
+            "retries": "3",
+            "retry.backoff.ms": "100",
+            "sasl.mechanism": "PLAIN",
+            "sasl.password": "zCWCHfIbPU",
+            "sasl.username": "user1",
+            "security.protocol": "SASL_PLAINTEXT"
+          },
+          "type": "Kafka"
+        }
+      },
+      "cache": {
+        "password": "XoK0b0JZ2W",
+        "serverAddress": "redis-master.default.svc.fog.lab",
+        "serverPort": 6379
+      },
+      "database": {
+        "connection": "mongodb://172.16.200.7:27017"
+      }
+    }
+  }
+}

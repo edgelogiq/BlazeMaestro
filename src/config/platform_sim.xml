@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE platform SYSTEM "https://simgrid.org/simgrid.dtd">
+<platform version="4.1">
+  <!-- Updated from Prometheus on 2026-01-07T12:35:04.587867 -->
+  <zone id="world" routing="Floyd">
+    <host id="fog-cpu1" speed="40Gf" core="8">
+      <prop id="ram.GB" value="7.6" />
+      <prop id="schedulable" value="false" />
+      <prop id="layer" value="fog" />
+      <prop id="debug.cpu_used" value="0.378" />
+      <prop id="debug.ram_used_gb" value="2.720" />
+    </host>
+    <host id="fog-cpu2" speed="50Gf" core="8">
+      <prop id="ram.GB" value="15.5" />
+      <prop id="layer" value="fog" />
+      <prop id="schedulable" value="true" />
+      <prop id="debug.cpu_used" value="0.681" />
+      <prop id="debug.ram_used_gb" value="4.142" />
+    </host>
+    <host id="fog-cpu3" speed="50Gf" core="8">
+      <prop id="ram.GB" value="15.5" />
+      <prop id="layer" value="fog" />
+      <prop id="schedulable" value="true" />
+      <prop id="debug.cpu_used" value="0.282" />
+      <prop id="debug.ram_used_gb" value="4.583" />
+    </host>
+    <host id="fog-gpu1" speed="45Gf" core="8">
+      <prop id="ram.GB" value="15.6" />
+      <prop id="gpu.count" value="1" />
+      <prop id="gpu.memGB" value="8" />
+      <prop id="layer" value="fog" />
+      <prop id="schedulable" value="true" />
+      <prop id="debug.cpu_used" value="0.340" />
+      <prop id="debug.ram_used_gb" value="4.843" />
+      <prop id="debug.gpu_used_gb" value="0.000" />
+    </host>
+    <host id="fog-gpu2" speed="50Gf" core="8">
+      <prop id="ram.GB" value="15.5" />
+      <prop id="gpu.count" value="1" />
+      <prop id="gpu.memGB" value="8" />
+      <prop id="layer" value="fog" />
+      <prop id="schedulable" value="true" />
+      <prop id="debug.cpu_used" value="0.332" />
+      <prop id="debug.ram_used_gb" value="4.497" />
+      <prop id="debug.gpu_used_gb" value="0.000" />
+    </host>
+    <host id="fog-cpu4" speed="30Gf" core="2">
+      <prop id="ram.GB" value="3.7" />
+      <prop id="layer" value="fog" />
+      <prop id="schedulable" value="false" />
+      <prop id="debug.cpu_used" value="0.397" />
+      <prop id="debug.ram_used_gb" value="2.315" />
+    </host>
+    <host id="fog-cpu5" speed="35Gf" core="8">
+      <prop id="ram.GB" value="15.5" />
+      <prop id="layer" value="fog" />
+      <prop id="schedulable" value="true" />
+      <prop id="debug.cpu_used" value="0.679" />
+      <prop id="debug.ram_used_gb" value="5.011" />
+    </host>
+    <host id="fog-gpu3" speed="40Gf" core="36">
+      <prop id="ram.GB" value="251.4" />
+      <prop id="gpu.count" value="3" />
+      <prop id="gpu.memGB" value="6" />
+      <prop id="layer" value="fog" />
+      <prop id="schedulable" value="true" />
+      <prop id="debug.cpu_used" value="0.660" />
+      <prop id="debug.ram_used_gb" value="7.765" />
+      <prop id="debug.gpu_used_gb" value="0.000" />
+    </host>
+    <host id="edge-cpu1" speed="20Gf" core="4">
+      <prop id="ram.GB" value="7.8" />
+      <prop id="layer" value="edge" />
+      <prop id="schedulable" value="false" />
+      <prop id="debug.cpu_used" value="0.288" />
+      <prop id="debug.ram_used_gb" value="2.397" />
+    </host>
+    <host id="edge-cpu2" speed="25Gf" core="8">
+      <prop id="ram.GB" value="15.5" />
+      <prop id="layer" value="edge" />
+      <prop id="schedulable" value="true" />
+      <prop id="debug.cpu_used" value="0.643" />
+      <prop id="debug.ram_used_gb" value="3.973" />
+    </host>
+    <host id="edge-cpu3" speed="20Gf" core="8">
+      <prop id="ram.GB" value="15.5" />
+      <prop id="layer" value="edge" />
+      <prop id="schedulable" value="true" />
+      <prop id="debug.cpu_used" value="0.538" />
+      <prop id="debug.ram_used_gb" value="3.223" />
+    </host>
+    <host id="edge-cpu4" speed="25Gf" core="16">
+      <prop id="ram.GB" value="15.0" />
+      <prop id="layer" value="edge" />
+      <prop id="schedulable" value="true" />
+      <prop id="debug.cpu_used" value="0.335" />
+      <prop id="debug.ram_used_gb" value="4.044" />
+    </host>
+    <host id="edge-gpu1" speed="30Gf" core="6">
+      <prop id="ram.GB" value="7.4" />
+      <prop id="gpu.count" value="1" />
+      <prop id="gpu.memGB" value="4" />
+      <prop id="layer" value="edge" />
+      <prop id="schedulable" value="true" />
+      <prop id="debug.cpu_used" value="1.322" />
+      <prop id="debug.ram_used_gb" value="1.483" />
+      <prop id="debug.gpu_used_gb" value="0.000" />
+    </host>
+    <host id="edge-gpu2" speed="35Gf" core="4">
+      <prop id="ram.GB" value="15.3" />
+      <prop id="gpu.count" value="1" />
+      <prop id="gpu.memGB" value="4" />
+      <prop id="layer" value="edge" />
+      <prop id="schedulable" value="true" />
+      <prop id="debug.cpu_used" value="1.230" />
+      <prop id="debug.ram_used_gb" value="1.745" />
+      <prop id="debug.gpu_used_gb" value="0.000" />
+    </host>
+    <host id="frank-1" speed="15Gf" core="8">
+      <prop id="ram.GB" value="30.0" />
+      <prop id="battery.powered" value="true" />
+      <prop id="battery.voltage" value="12.0" />
+      <prop id="battery.capacity.ah" value="21.0" />
+      <prop id="power.jetson.base" value="5.0" />
+      <prop id="power.jetson.active" value="40.0" />
+      <prop id="power.motor.max" value="24.0" />
+      <prop id="layer" value="edge" />
+      <prop id="gpu.count" value="1" />
+      <prop id="schedulable" value="false" />
+      <prop id="debug.cpu_used" value="0.000" />
+      <prop id="debug.ram_used_gb" value="0.000" />
+      <prop id="debug.gpu_used_gb" value="0.000" />
+    </host>
+    <host id="frank-2" speed="15Gf" core="8">
+      <prop id="ram.GB" value="30.0" />
+      <prop id="battery.powered" value="true" />
+      <prop id="battery.voltage" value="12.0" />
+      <prop id="battery.capacity.ah" value="21.0" />
+      <prop id="power.jetson.base" value="5.0" />
+      <prop id="power.jetson.active" value="40.0" />
+      <prop id="power.motor.max" value="24.0" />
+      <prop id="layer" value="edge" />
+      <prop id="gpu.count" value="1" />
+      <prop id="schedulable" value="true" />
+      <prop id="debug.cpu_used" value="1.092" />
+      <prop id="debug.ram_used_gb" value="2.747" />
+      <prop id="debug.gpu_used_gb" value="0.000" />
+    </host>
+    <host id="cloud-cpu2" core="2" speed="16Gf">
+      <prop id="layer" value="cloud" />
+      <prop id="schedulable" value="false" />
+      <prop id="ram.GB" value="15.5" />
+      <prop id="debug.cpu_used" value="0.122" />
+      <prop id="debug.ram_used_gb" value="1.660" />
+    </host>
+    <host id="cloud-cpu3" core="8" speed="32Gf">
+      <prop id="layer" value="cloud" />
+      <prop id="schedulable" value="true" />
+      <prop id="ram.GB" value="11.6" />
+      <prop id="debug.cpu_used" value="0.453" />
+      <prop id="debug.ram_used_gb" value="5.814" />
+    </host>
+    <host id="cloud-cpu4" core="16" speed="80Gf">
+      <prop id="layer" value="cloud" />
+      <prop id="schedulable" value="true" />
+      <prop id="ram.GB" value="28.3" />
+      <prop id="debug.cpu_used" value="0.657" />
+      <prop id="debug.ram_used_gb" value="8.473" />
+    </host>
+    <host id="cloud-cpu5" core="16" speed="80Gf">
+      <prop id="layer" value="cloud" />
+      <prop id="schedulable" value="true" />
+      <prop id="ram.GB" value="30.7" />
+      <prop id="debug.cpu_used" value="0.345" />
+      <prop id="debug.ram_used_gb" value="6.148" />
+    </host>
+    <host id="cloud-gpu1" core="12" speed="64Gf">
+      <prop id="layer" value="cloud" />
+      <prop id="schedulable" value="true" />
+      <prop id="ram.GB" value="31.1" />
+      <prop id="gpu.count" value="1" />
+      <prop id="gpu.memGB" value="6" />
+      <prop id="debug.cpu_used" value="0.206" />
+      <prop id="debug.ram_used_gb" value="1.174" />
+      <prop id="debug.gpu_used_gb" value="0.000" />
+    </host>
+    <host id="cloud-gpu2" core="20" speed="120Gf">
+      <prop id="layer" value="cloud" />
+      <prop id="schedulable" value="true" />
+      <prop id="ram.GB" value="31.2" />
+      <prop id="gpu.count" value="1" />
+      <prop id="gpu.memGB" value="24" />
+      <prop id="debug.cpu_used" value="0.340" />
+      <prop id="debug.ram_used_gb" value="10.294" />
+      <prop id="debug.gpu_used_gb" value="0.000" />
+    </host>
+    <router id="cloud-router" />
+    <router id="fog-router" />
+    <router id="edge-router" />
+    <link id="cloud-internal" bandwidth="1Gbps" latency="2ms" />
+    <link id="fog-internal" bandwidth="1Gbps" latency="3ms" />
+    <link id="edge-internal" bandwidth="1Gbps" latency="3ms" />
+    <link id="frank-1-wifi6" bandwidth="600Mbps" latency="5ms" />
+    <link id="frank-2-wifi6" bandwidth="600Mbps" latency="5ms" />
+    <link id="cloud-to-fog" bandwidth="1Gbps" latency="45ms" />
+    <link id="cloud-to-edge" bandwidth="1Gbps" latency="50ms" />
+    <link id="fog-to-edge" bandwidth="1Gbps" latency="5ms" />
+    <link id="cloud-cpu2-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="cloud-cpu3-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="cloud-cpu4-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="cloud-cpu5-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="cloud-gpu1-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="cloud-gpu2-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="fog-cpu1-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="fog-cpu2-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="fog-cpu3-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="fog-gpu1-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="fog-gpu2-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="fog-cpu4-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="fog-cpu5-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="fog-gpu3-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="edge-cpu1-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="edge-cpu2-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="edge-cpu3-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="edge-cpu4-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="edge-gpu1-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="edge-gpu2-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="frank-1-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <link id="frank-2-loop" bandwidth="1Gbps" latency="0.1ms" />
+    <route src="cloud-cpu2" dst="cloud-router" symmetrical="YES">
+      <link_ctn id="cloud-internal" />
+    </route>
+    <route src="cloud-cpu3" dst="cloud-router" symmetrical="YES">
+      <link_ctn id="cloud-internal" />
+    </route>
+    <route src="cloud-cpu4" dst="cloud-router" symmetrical="YES">
+      <link_ctn id="cloud-internal" />
+    </route>
+    <route src="cloud-cpu5" dst="cloud-router" symmetrical="YES">
+      <link_ctn id="cloud-internal" />
+    </route>
+    <route src="cloud-gpu1" dst="cloud-router" symmetrical="YES">
+      <link_ctn id="cloud-internal" />
+    </route>
+    <route src="cloud-gpu2" dst="cloud-router" symmetrical="YES">
+      <link_ctn id="cloud-internal" />
+    </route>
+    <route src="cloud-cpu2" dst="cloud-cpu3" symmetrical="YES">
+      <link_ctn id="cloud-internal" />
+      <link_ctn id="cloud-internal" />
+    </route>
+    <route src="fog-cpu1" dst="fog-router" symmetrical="YES">
+      <link_ctn id="fog-internal" />
+    </route>
+    <route src="fog-cpu2" dst="fog-router" symmetrical="YES">
+      <link_ctn id="fog-internal" />
+    </route>
+    <route src="fog-cpu3" dst="fog-router" symmetrical="YES">
+      <link_ctn id="fog-internal" />
+    </route>
+    <route src="fog-gpu1" dst="fog-router" symmetrical="YES">
+      <link_ctn id="fog-internal" />
+    </route>
+    <route src="fog-gpu2" dst="fog-router" symmetrical="YES">
+      <link_ctn id="fog-internal" />
+    </route>
+    <route src="fog-cpu4" dst="fog-router" symmetrical="YES">
+      <link_ctn id="fog-internal" />
+    </route>
+    <route src="fog-cpu5" dst="fog-router" symmetrical="YES">
+      <link_ctn id="fog-internal" />
+    </route>
+    <route src="fog-gpu3" dst="fog-router" symmetrical="YES">
+      <link_ctn id="fog-internal" />
+    </route>
+    <route src="fog-cpu1" dst="fog-cpu2" symmetrical="YES">
+      <link_ctn id="fog-internal" />
+      <link_ctn id="fog-internal" />
+    </route>
+    <route src="edge-cpu1" dst="edge-router" symmetrical="YES">
+      <link_ctn id="edge-internal" />
+    </route>
+    <route src="edge-cpu2" dst="edge-router" symmetrical="YES">
+      <link_ctn id="edge-internal" />
+    </route>
+    <route src="edge-cpu3" dst="edge-router" symmetrical="YES">
+      <link_ctn id="edge-internal" />
+    </route>
+    <route src="edge-cpu4" dst="edge-router" symmetrical="YES">
+      <link_ctn id="edge-internal" />
+    </route>
+    <route src="edge-gpu1" dst="edge-router" symmetrical="YES">
+      <link_ctn id="edge-internal" />
+    </route>
+    <route src="edge-gpu2" dst="edge-router" symmetrical="YES">
+      <link_ctn id="edge-internal" />
+    </route>
+    <route src="frank-1" dst="edge-router" symmetrical="YES">
+      <link_ctn id="frank-1-wifi6" />
+    </route>
+    <route src="frank-2" dst="edge-router" symmetrical="YES">
+      <link_ctn id="frank-2-wifi6" />
+    </route>
+    <route src="edge-cpu1" dst="edge-cpu2" symmetrical="YES">
+      <link_ctn id="edge-internal" />
+      <link_ctn id="edge-internal" />
+    </route>
+    <route src="fog-router" dst="edge-router" symmetrical="YES">
+      <link_ctn id="fog-to-edge" />
+    </route>
+    <route src="cloud-router" dst="fog-router" symmetrical="YES">
+      <link_ctn id="cloud-to-fog" />
+    </route>
+    <route src="cloud-router" dst="edge-router" symmetrical="YES">
+      <link_ctn id="cloud-to-edge" />
+    </route>
+  </zone>
+</platform>

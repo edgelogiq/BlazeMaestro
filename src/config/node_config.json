@@ -1,0 +1,9 @@
+{
+  "nodeId": "685181f0352aef6b9a7e44c9",
+  "nodeName": "fog-gpu3",
+  "nodeConfig": {
+    "parameters": {
+      "computeType": "gpu"
+    }
+  }
+}

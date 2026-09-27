@@ -1,0 +1,107 @@
+# Environment Configuration
+# Choose between 'kubernetes' (real environment) or 'simulator' (simulated environment)
+environment:
+  mode: kubernetes  # Options: 'kubernetes' | 'simulator'
+  
+  # Simulator-specific settings (only used when mode: simulator)
+  simulator:
+    platform_xml: src/config/platform.xml  # Path to platform topology XML
+    services_xml: src/config/services.xml  # Path to services definition XML
+  
+  # Kubernetes-specific settings (only used when mode: kubernetes)
+  kubernetes:
+    clusters:
+    - name: Fog Cluster
+      layer_id: fog
+      context: lab-fog-cluster
+      kubeconfig_path: /home/cmelancon/.kube/config.lab.fog
+      prometheus_url: http://localhost:9090
+      description: Mid-tier edge gateways
+    - name: Edge Cluster
+      layer_id: edge
+      context: lab-edge-cluster
+      kubeconfig_path: /home/cmelancon/.kube/config.lab.edge
+      prometheus_url: http://localhost:9091
+      description: Edge devices close to data sources
+    - name: Cloud Cluster
+      layer_id: cloud
+      context: lab-cloud-cluster
+      kubeconfig_path: /home/cmelancon/.kube/config.lab.cloud
+      prometheus_url: http://localhost:9092
+      description: Cloud data centers
+
+services:
+  source: xml
+  xml_path: src/config/services.xml
+  namespace: blazeaiot  # Kubernetes namespace where your services are deployed
+  label_selector: app.kubernetes.io/name  # Optional: filter services by label
+  # Label keys priority used to match K8s workloads to service IDs
+  # Add labels like: blaze-service-id: <service_id>
+  label_keys:
+  - blaze-service-id
+  - app.kubernetes.io/name
+  - app
+  - k8s-app
+  log_labels: false  # Control logging of pod labels during discovery (false disables label logs)
+
+# Enable automatic config sync from Prometheus
+update_configs_from_prometheus: true
+config_update_interval: 1  # Update every iteration
+
+orchestrator:
+  # Active orchestrator (uncomment the one you want to use)
+  # rate_hz: 0.1
+  continuous: true
+  # apply_changes: false
+  
+  # # Simulator-specific settings
+  # max_iterations: 10  # Number of iterations in simulator mode (set to 0 for unlimited)
+
+  # --- Available Orchestrators ---
+
+  # 1. NSGA2 Orchestrator (Pure Python NSGA-II) - RESEARCH
+  # Pure Python implementation without external dependencies
+  # Good for comparison studies and environments without external dependencies
+  type: nsga2
+  # population_size: 30
+  # generations: 50
+
+  # 2. DQN Orchestrator (Deep Q-Learning) - INFERENCE MODE
+  # Using pre-trained checkpoint for fast inference
+  # type: dqn
+  # checkpoint_path: out/train/final/DQN_checkpoint.pt  # Load trained model for inference
+  
+  # Training parameters (only used if checkpoint_path is not set)
+  # episodes: 1  # Set to 1 for fast online learning
+  # gamma: 0.99
+  # lr: 0.0003
+  # epsilon_start: 1.0
+  # epsilon_end: 0.1
+  # epsilon_decay: 0.9995
+  # batch_size: 64
+  # max_memory: 10000
+  # update_target_steps: 100
+
+  # 4. Unsupervised Orchestrator (Autoencoder-based) - RESEARCH
+  # Uses unsupervised learning to learn placement patterns
+  # Energy-aware with autoencoder energy estimator
+  #type: unsupervised
+  #checkpoint_path: out/train/final/Unsupervised_checkpoint.pt  # Load trained model for inference
+  # energy_settings:
+  #   latent_dim: 16
+  #   lr: 0.001
+  #   epochs: 50
+  # weights:
+  #   energy: 10.0
+  #   latency: 1.0
+  #   balance: 0.5
+
+  # 5. AutoEncoder Orchestrator (Alternative Unsupervised) - RESEARCH
+  # Alternative autoencoder implementation with different approach
+  #type: autoencoder
+  #checkpoint_path: out/train/final/AutoEncoder_checkpoint.pt  # Load trained model for inference
+  # epochs: 100
+  # latent_dim: 32
+  # lr: 0.001
+  # batch_size: 32
+  # temperature: 1.0

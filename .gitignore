@@ -1,0 +1,19 @@
+
+.idea/
+
+.vscode/
+
+.venv/
+
+src/.venv/
+
+**/__pycache__/
+
+*.gz
+
+simgrid-v4.1/
+
+logs/
+
+doc/**/*.tex
+src/config/services copy.xml

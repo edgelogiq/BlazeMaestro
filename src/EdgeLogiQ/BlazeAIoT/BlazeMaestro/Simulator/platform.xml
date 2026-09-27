@@ -1,0 +1,187 @@
+<?xml version='1.0'?>
+<!DOCTYPE platform SYSTEM "https://simgrid.org/simgrid.dtd">
+<platform version="4.1">
+    <zone id="world" routing="Floyd">
+        <!-- Cloud hosts -->
+        <host id="cloud-cpu2" speed="16Gf" core="2">
+            <prop id="ram.GB" value="16"/>
+        </host>
+        <host id="cloud-cpu3" speed="32Gf" core="4">
+            <prop id="ram.GB" value="16"/>
+        </host>
+        <host id="cloud-cpu4" speed="80Gf" core="8">
+            <prop id="ram.GB" value="32"/>
+        </host>
+        <host id="cloud-cpu5" speed="80Gf" core="8">
+            <prop id="ram.GB" value="32"/>
+        </host>
+        <host id="cloud-gpu1" speed="64Gf" core="6">
+            <prop id="ram.GB" value="32"/>
+            <prop id="gpu.count" value="1"/>
+            <prop id="gpu.memGB" value="6"/>
+        </host>
+        <host id="cloud-gpu2" speed="120Gf" core="12">
+            <prop id="ram.GB" value="32"/>
+            <prop id="gpu.count" value="1"/>
+            <prop id="gpu.memGB" value="24"/>
+        </host>
+        <!-- Fog hosts -->
+        <host id="fog-cpu1" speed="40Gf" core="4">
+            <prop id="ram.GB" value="8"/>
+        </host>
+        <host id="fog-cpu2" speed="50Gf" core="8">
+            <prop id="ram.GB" value="16"/>
+        </host>
+        <host id="fog-cpu3" speed="50Gf" core="8">
+            <prop id="ram.GB" value="16"/>
+        </host>
+        <host id="fog-gpu1" speed="45Gf" core="8">
+            <prop id="ram.GB" value="16"/>
+            <prop id="gpu.count" value="1"/>
+            <prop id="gpu.memGB" value="8"/>
+        </host>
+        <host id="fog-gpu2" speed="50Gf" core="8">
+            <prop id="ram.GB" value="16"/>
+            <prop id="gpu.count" value="1"/>
+            <prop id="gpu.memGB" value="8"/>
+        </host>
+        <host id="fog-cpu4" speed="30Gf" core="4">
+            <prop id="ram.GB" value="8"/>
+        </host>
+        <host id="fog-cpu5" speed="35Gf" core="4">
+            <prop id="ram.GB" value="8"/>
+        </host>
+        <host id="fog-gpu3" speed="40Gf" core="8">
+            <prop id="ram.GB" value="16"/>
+            <prop id="gpu.count" value="1"/>
+            <prop id="gpu.memGB" value="6"/>
+        </host>
+        <!-- Edge hosts -->
+        <host id="edge-cpu1" speed="20Gf" core="2">
+            <prop id="ram.GB" value="4"/>
+        </host>
+        <host id="edge-cpu2" speed="25Gf" core="2">
+            <prop id="ram.GB" value="4"/>
+        </host>
+        <host id="edge-cpu3" speed="20Gf" core="2">
+            <prop id="ram.GB" value="4"/>
+        </host>
+        <host id="edge-cpu4" speed="25Gf" core="2">
+            <prop id="ram.GB" value="4"/>
+        </host>
+        <host id="edge-gpu1" speed="30Gf" core="4">
+            <prop id="ram.GB" value="8"/>
+            <prop id="gpu.count" value="1"/>
+            <prop id="gpu.memGB" value="4"/>
+        </host>
+        <host id="edge-gpu2" speed="35Gf" core="4">
+            <prop id="ram.GB" value="8"/>
+            <prop id="gpu.count" value="1"/>
+            <prop id="gpu.memGB" value="4"/>
+        </host>
+        <!-- Frank hosts (mobile robots with WiFi 6 connectivity) -->
+        <!-- Battery-powered mobile robots with Li-ion batteries -->
+        <!-- Connected via WiFi 6 (802.11ax) to edge-internal -->
+        <host id="frank-1" speed="15Gf" core="2">
+            <prop id="ram.GB" value="2"/>
+            <prop id="battery.powered" value="true"/>
+            <prop id="battery.voltage" value="12.0"/>
+            <prop id="battery.capacity.ah" value="21.0"/>
+            <prop id="power.base" value="3.0"/>
+            <prop id="power.active" value="5.0"/>
+        </host>
+        
+        <!-- Routers for hierarchical topology -->
+        <router id="cloud-router"/>
+        <router id="fog-router"/>
+        <router id="edge-router"/>
+        
+        <!-- Core interconnect links (must appear before routes referencing them) -->
+        <link id="cloud-internal" bandwidth="1Gbps" latency="2ms"/>
+        <link id="fog-internal" bandwidth="1Gbps" latency="3ms"/>
+        <link id="edge-internal" bandwidth="1Gbps" latency="3ms"/>
+        <!-- WiFi 6 links for Frank mobile hosts -->
+        <link id="frank-1-wifi6" bandwidth="600Mbps" latency="5ms"/>
+        <link id="cloud-to-fog" bandwidth="1Gbps" latency="25ms"/>
+        <link id="cloud-to-edge" bandwidth="1Gbps" latency="35ms"/>
+        <link id="fog-to-edge" bandwidth="1Gbps" latency="5ms"/>
+
+        <!-- Loopback links for all hosts (0.1ms) -->
+        <link id="cloud-cpu2-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="cloud-cpu3-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="cloud-cpu4-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="cloud-cpu5-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="cloud-gpu1-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="cloud-gpu2-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="fog-cpu1-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="fog-cpu2-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="fog-cpu3-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="fog-gpu1-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="fog-gpu2-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="fog-cpu4-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="fog-cpu5-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="fog-gpu3-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="edge-cpu1-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="edge-cpu2-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="edge-cpu3-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="edge-cpu4-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="edge-gpu1-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="edge-gpu2-loop" bandwidth="1Gbps" latency="0.1ms"/>
+        <link id="frank-1-loop" bandwidth="1Gbps" latency="0.1ms"/>
+
+        <!-- Host <-> router routes for hierarchical topology -->
+        <!-- Cloud hosts to cloud router -->
+        <route src="cloud-cpu2" dst="cloud-router" symmetrical="YES"><link_ctn id="cloud-internal"/></route>
+        <route src="cloud-cpu3" dst="cloud-router" symmetrical="YES"><link_ctn id="cloud-internal"/></route>
+        <route src="cloud-cpu4" dst="cloud-router" symmetrical="YES"><link_ctn id="cloud-internal"/></route>
+        <route src="cloud-cpu5" dst="cloud-router" symmetrical="YES"><link_ctn id="cloud-internal"/></route>
+        <route src="cloud-gpu1" dst="cloud-router" symmetrical="YES"><link_ctn id="cloud-internal"/></route>
+        <route src="cloud-gpu2" dst="cloud-router" symmetrical="YES"><link_ctn id="cloud-internal"/></route>
+        
+        <!-- Sample intra-cluster routes for Floyd to compute others -->
+        <route src="cloud-cpu2" dst="cloud-cpu3" symmetrical="YES">
+            <link_ctn id="cloud-internal"/><link_ctn id="cloud-internal"/>
+        </route>
+
+        <!-- Fog hosts to fog router -->
+        <route src="fog-cpu1" dst="fog-router" symmetrical="YES"><link_ctn id="fog-internal"/></route>
+        <route src="fog-cpu2" dst="fog-router" symmetrical="YES"><link_ctn id="fog-internal"/></route>
+        <route src="fog-cpu3" dst="fog-router" symmetrical="YES"><link_ctn id="fog-internal"/></route>
+        <route src="fog-gpu1" dst="fog-router" symmetrical="YES"><link_ctn id="fog-internal"/></route>
+        <route src="fog-gpu2" dst="fog-router" symmetrical="YES"><link_ctn id="fog-internal"/></route>
+        <route src="fog-cpu4" dst="fog-router" symmetrical="YES"><link_ctn id="fog-internal"/></route>
+        <route src="fog-cpu5" dst="fog-router" symmetrical="YES"><link_ctn id="fog-internal"/></route>
+        <route src="fog-gpu3" dst="fog-router" symmetrical="YES"><link_ctn id="fog-internal"/></route>
+        
+        <!-- Sample intra-cluster routes for Floyd to compute others -->
+        <route src="fog-cpu1" dst="fog-cpu2" symmetrical="YES">
+            <link_ctn id="fog-internal"/><link_ctn id="fog-internal"/>
+        </route>
+
+        <!-- Edge hosts to edge router -->
+        <route src="edge-cpu1" dst="edge-router" symmetrical="YES"><link_ctn id="edge-internal"/></route>
+        <route src="edge-cpu2" dst="edge-router" symmetrical="YES"><link_ctn id="edge-internal"/></route>
+        <route src="edge-cpu3" dst="edge-router" symmetrical="YES"><link_ctn id="edge-internal"/></route>
+        <route src="edge-cpu4" dst="edge-router" symmetrical="YES"><link_ctn id="edge-internal"/></route>
+        <route src="edge-gpu1" dst="edge-router" symmetrical="YES"><link_ctn id="edge-internal"/></route>
+        <route src="edge-gpu2" dst="edge-router" symmetrical="YES"><link_ctn id="edge-internal"/></route>
+        <!-- Frank hosts connect via WiFi 6 to edge router -->
+        <route src="frank-1" dst="edge-router" symmetrical="YES"><link_ctn id="frank-1-wifi6"/></route>
+        
+        <!-- Sample intra-cluster routes for Floyd to compute others -->
+        <route src="edge-cpu1" dst="edge-cpu2" symmetrical="YES">
+            <link_ctn id="edge-internal"/><link_ctn id="edge-internal"/>
+        </route>
+
+        <!-- Inter-cluster routes: connect routers via inter-cluster links -->
+        <route src="cloud-router" dst="fog-router" symmetrical="YES">
+            <link_ctn id="cloud-to-fog"/>
+        </route>
+        <route src="cloud-router" dst="edge-router" symmetrical="YES">
+            <link_ctn id="cloud-to-edge"/>
+        </route>
+        <route src="fog-router" dst="edge-router" symmetrical="YES">
+            <link_ctn id="fog-to-edge"/>
+        </route>
+    </zone>
+</platform>

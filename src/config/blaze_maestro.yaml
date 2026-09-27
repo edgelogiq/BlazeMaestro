@@ -1,0 +1,93 @@
+# Environment Configuration
+# Choose between 'kubernetes' (real environment) or 'simulator' (simulated environment)
+environment:
+  mode: kubernetes  # Options: 'kubernetes' | 'simulator'
+  
+  # Simulator-specific settings (only used when mode: simulator)
+  simulator:
+    platform_xml: src/config/platform.xml  # Path to platform topology XML
+    services_xml: src/config/services.xml  # Path to services definition XML
+  
+  # Kubernetes-specific settings (only used when mode: kubernetes)
+  kubernetes:
+    clusters:
+    - name: Fog Cluster
+      layer_id: fog
+      context: lab-fog-cluster
+      kubeconfig_path: /home/cmelancon/.kube/config.lab.fog
+      prometheus_url: http://localhost:9090
+      description: Mid-tier edge gateways
+    - name: Edge Cluster
+      layer_id: edge
+      context: lab-edge-cluster
+      kubeconfig_path: /home/cmelancon/.kube/config.lab.edge
+      prometheus_url: http://localhost:9091
+      description: Edge devices close to data sources
+    - name: Cloud Cluster
+      layer_id: cloud
+      context: lab-cloud-cluster
+      kubeconfig_path: /home/cmelancon/.kube/config.lab.cloud
+      prometheus_url: http://localhost:9092
+      description: Cloud data centers
+
+services:
+  source: xml
+  xml_path: src/config/services.xml
+  namespace: blazeaiot  # Kubernetes namespace where your services are deployed
+  label_selector: app.kubernetes.io/name  # Optional: filter services by label
+  # Label keys priority used to match K8s workloads to service IDs
+  # Add labels like: blaze-service-id: <service_id>
+  label_keys:
+  - blaze-service-id
+  - app.kubernetes.io/name
+  - app
+  - k8s-app
+  log_labels: false  # Control logging of pod labels during discovery (false disables label logs)
+
+# Enable automatic config sync from Prometheus
+update_configs_from_prometheus: true
+config_update_interval: 1  # Update every iteration
+
+orchestrator:
+  # Which orchestrator is active (will be applied)
+  active: dqn
+  
+  rate_hz: 0.1
+  continuous: true
+  apply_changes: true  # Apply changes to Kubernetes in production
+  metrics_only: false
+  
+  # Per-orchestrator configurations
+  strategies:
+    nsga2:
+      population_size: 40
+      generations: 80
+      hysteresis_threshold: 0.05  # NSGA2: 5% improvement required (stable)
+    
+    dqn:
+      checkpoint_path: out/train/final/DQN_checkpoint.pt
+      hysteresis_threshold: 0.0
+    
+    unsupervised:
+      checkpoint_path: out/train/final/Unsupervised_checkpoint.pt
+      hysteresis_threshold: 0.0
+    
+    autoencoder:
+      checkpoint_path: out/train/final/AutoEncoder_checkpoint.pt
+      hysteresis_threshold: 0.0
+
+  # Comparison mode (run additional orchestrators for side-by-side analysis)
+  compare:
+    enabled: true
+    # Orchestrators to run for comparison (including active one - will be shown in its named column)
+    types: [nsga2, dqn, unsupervised, autoencoder]
+    # Only log when a comparison proposes a different placement
+    log_changes_only: true
+    # Show a row even when there are no differences
+    show_no_differences: true
+  
+  # Default hysteresis threshold (used if not specified per-orchestrator)
+  hysteresis_threshold: 0.0
+  
+  # Simulator-specific settings (ignored in Kubernetes mode)
+  max_iterations: 0  # 0 = unlimited iterations

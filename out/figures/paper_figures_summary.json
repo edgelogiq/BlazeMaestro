@@ -1,0 +1,96 @@
+{
+  "compare_summary": {
+    "NSGA-II": {
+      "avg_latency": 0.18457452785687004,
+      "avg_energy": 417.97830071171035,
+      "total_energy": 25078.69804270262,
+      "total_violations": 0.0,
+      "reassignments": 59.0,
+      "steps": 60.0
+    },
+    "DQN": {
+      "avg_latency": 0.254534392558558,
+      "avg_energy": 396.8868113839357,
+      "total_energy": 23813.208683036144,
+      "total_violations": 0.0,
+      "reassignments": 3.0,
+      "steps": 60.0
+    },
+    "GreedyWeighted": {
+      "avg_latency": 0.22961026042204546,
+      "avg_energy": 396.8868113839357,
+      "total_energy": 23813.208683036144,
+      "total_violations": 0.0,
+      "reassignments": 12.0,
+      "steps": 60.0
+    },
+    "Autoencoder": {
+      "avg_latency": 0.2541354145719608,
+      "avg_energy": 404.0798792425149,
+      "total_energy": 24244.792754550894,
+      "total_violations": 0.0,
+      "reassignments": 30.0,
+      "steps": 60.0
+    }
+  },
+  "test_summary": {
+    "NSGA-II": {
+      "avg_latency": 0.18457452785687004,
+      "avg_energy": 417.97830071171035,
+      "total_energy": 25078.69804270262,
+      "total_violations": 0.0,
+      "reassignments": 59.0,
+      "steps": 60.0
+    },
+    "DQN": {
+      "avg_latency": 0.254534392558558,
+      "avg_energy": 396.8868113839357,
+      "total_energy": 23813.208683036144,
+      "total_violations": 0.0,
+      "reassignments": 3.0,
+      "steps": 60.0
+    },
+    "GreedyWeighted": {
+      "avg_latency": 0.22961026042204546,
+      "avg_energy": 396.8868113839357,
+      "total_energy": 23813.208683036144,
+      "total_violations": 0.0,
+      "reassignments": 12.0,
+      "steps": 60.0
+    },
+    "Autoencoder": {
+      "avg_latency": 0.2541354145719608,
+      "avg_energy": 404.0798792425149,
+      "total_energy": 24244.792754550894,
+      "total_violations": 0.0,
+      "reassignments": 30.0,
+      "steps": 60.0
+    }
+  },
+  "stability_summary": {
+    "NSGA-II": {
+      "total_reassignments": 184.0,
+      "total_flip_flops": 57.0,
+      "flip_flop_ratio": 0.30978260869565216,
+      "churn_score": 77.86201179071482
+    },
+    "DQN": {
+      "total_reassignments": 3.0,
+      "total_flip_flops": 0.0,
+      "flip_flop_ratio": 0.0,
+      "churn_score": 1.0169491525423728
+    },
+    "GreedyWeighted": {
+      "total_reassignments": 31.0,
+      "total_flip_flops": 6.0,
+      "flip_flop_ratio": 0.1935483870967742,
+      "churn_score": 20.185893931109895
+    },
+    "Autoencoder": {
+      "total_reassignments": 30.0,
+      "total_flip_flops": 8.0,
+      "flip_flop_ratio": 0.26666666666666666,
+      "churn_score": 23.502824858757062
+    }
+  }
+}

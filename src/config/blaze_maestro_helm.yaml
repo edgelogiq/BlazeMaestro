@@ -1,0 +1,62 @@
+environment:
+  mode: kubernetes
+  simulator:
+    platform_xml: /data/config/platform.xml
+    services_xml: /data/config/services.xml
+  kubernetes:
+    clusters:
+    - name: Fog Cluster
+      layer_id: fog
+      context: lab-fog-cluster
+      kubeconfig_path: /data/.kube/config.lab.fog
+      prometheus_url: http://prometheus-operated.cattle-monitoring-system.svc.fog.lab:9090
+      description: Mid-tier edge gateways
+    - name: Edge Cluster
+      layer_id: edge
+      context: lab-edge-cluster
+      kubeconfig_path: /data/.kube/config.lab.edge
+      prometheus_url: http://prometheus-operated.cattle-monitoring-system.svc.edge.lab:9090
+      description: Edge devices close to data sources
+    - name: Cloud Cluster
+      layer_id: cloud
+      context: lab-cloud-cluster
+      kubeconfig_path: /data/.kube/config.home.cloud
+      prometheus_url: http://prometheus-operated.cattle-monitoring-system.svc.cloud.lab:9090
+      description: Cloud data centers
+services:
+  source: xml
+  xml_path: /data/config/services.xml
+  namespace: blazeaiot
+  label_selector: app.kubernetes.io/name
+  label_keys:
+  - blaze-service-id
+  - app.kubernetes.io/name
+  - app
+  - k8s-app
+  log_labels: false
+update_configs_from_prometheus: true
+config_update_interval: 1
+orchestrator:
+  #type: nsga2
+
+  #type: dqn
+  #checkpoint_path: /data/ckpt/DQN_checkpoint.pt  # Load trained model for inference
+
+  #type: unsupervised
+  #checkpoint_path: /data/ckpt/Unsupervised_checkpoint.pt  # Load trained model for inference
+
+  #type: autoencoder
+  #checkpoint_path: /data/ckpt/AutoEncoder_checkpoint.pt  # Load trained model for inference
+
+  type: test
+  service_id: robot-localization
+  target_node_id: fog-gpu1
+  
+  rate_hz: 0.1
+  continuous: true
+  apply_changes: false  # Don't apply to K8s in simulator mode
+  max_iterations: 10  # Number of iterations to run in simulator mode
+
+  # NSGA2 orchestrator settings
+  population_size: 40
+  generations: 80

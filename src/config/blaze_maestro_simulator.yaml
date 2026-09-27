@@ -1,0 +1,84 @@
+# BlazeAIoT Maestro Configuration - Simulator Mode
+# This configuration runs BlazeMaestro in simulator mode using platform.xml
+
+# Environment Configuration
+environment:
+  mode: simulator  # Run in simulator mode (no Kubernetes required)
+  
+  simulator:
+    platform_xml: src/config/platform_sim.xml  # Path to platform topology XML
+    services_xml: src/config/services_sim.xml  # Path to services definition XML
+    
+    # WiFi mobility simulation (optional)
+    wifi:
+      enabled: true  # Enable WiFi degradation simulation
+      update_interval: 1.0  # Update WiFi quality every N seconds
+      # Robot configuration
+      robot:
+        host_id: frank-2  # Robot node ID
+        initial_position: [0.0, 0.0]  # Starting position [x, y] - close to edge-gpu1 at (0,0)
+        velocity: [0.2, 0.0]  # Movement velocity [vx, vy] in m/s
+      # Access points configuration
+      access_points:
+        - host_id: edge-gpu1
+          position: [0.0, 0.0]
+          coverage_radius: 20.0
+        - host_id: edge-gpu2
+          position: [30.0, 0.0]
+          coverage_radius: 20.0
+
+services:
+  source: xml
+  xml_path: src/config/services_sim.xml
+  namespace: blazeaiot
+
+# Metrics will automatically use simulator mode when environment is simulator
+metrics:
+  source: simulator  # Explicitly set to simulator (auto-detected if omitted)
+  enabled: true
+
+# Config updates from Prometheus disabled in simulator mode
+update_configs_from_prometheus: false
+config_update_interval: 1
+
+orchestrator:
+  # Which orchestrator is active (will be applied)
+  active: dqn
+  
+  rate_hz: 0.1
+  continuous: true
+
+  # Per-orchestrator configurations
+  strategies:
+    nsga2:
+      population_size: 20
+      generations: 40
+      hysteresis_threshold: 0.05  # NSGA2: allow any improvement
+    
+    dqn:
+      checkpoint_path: out/train/final/DQN_checkpoint.pt
+      hysteresis_threshold: 0.0  # DQN: 5% improvement required (more stable)
+    
+    unsupervised:
+      checkpoint_path: out/train/final/Unsupervised_checkpoint.pt
+      hysteresis_threshold: 0.0  # Unsupervised: allow any improvement
+    
+    autoencoder:
+      checkpoint_path: out/train/final/AutoEncoder_checkpoint.pt
+      hysteresis_threshold: 0.0  # AutoEncoder: 10% improvement required (more stable)
+
+  # Comparison mode (run additional orchestrators for side-by-side analysis)
+  compare:
+    enabled: true
+    # Orchestrators to run for comparison (including active one - will be shown in its named column)
+    types: [nsga2, dqn, unsupervised, autoencoder]
+    # Only log when a comparison proposes a different placement
+    log_changes_only: true
+    # Show a row even when there are no differences
+    show_no_differences: true
+  
+  apply_changes: false  # Don't apply to K8s in simulator mode
+  max_iterations: 20  # Number of iterations to run in simulator mode
+  
+  # Default hysteresis threshold (used if not specified per-orchestrator)
+  hysteresis_threshold: 0.0
