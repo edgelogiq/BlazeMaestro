@@ -5,7 +5,7 @@ Shared utility methods for orchestrators and orchestration strategies.
 These methods are used by both concrete orchestrators and the OrchestrationContext.
 """
 
-from typing import Any, List, Optional, Dict
+from typing import Tuple, Any, List, Optional, Dict
 from BlazeAIoT.Core.Utils import BlazeLogger
 
 # Safety margin applied to the period budget in the soft constraint revalidation check.
@@ -97,6 +97,25 @@ class OrchestratorUtils:
         # Return 0.0 for exec_time if None (non-time-constrained service)
         return float(cpu), float(ram), float(gpu), float(exec_time if exec_time is not None else 0.0), float(period)
 
+    def service_period_ok(self, svc: Any, node_id: str, placement: Dict[str, str]) -> bool:
+        """Period part of V(x) for one service, shared by every orchestrator.
+
+        (1) t_exec(s,n) <= T_period(s) and
+        (2) t_exec(s,n) + L_dep^hard(s,n) <= (1 - PERIOD_JITTER_MARGIN) * T_period(s),
+        where L_dep^hard is the transitive latency over blocking, hard dependencies that
+        are already placed in ``placement`` (partial placements are allowed).
+        """
+        _, _, _, exec_time, period = self._service_demands(svc, node_id)
+        if not (0 < period < float('inf')):
+            return True
+        if exec_time > period:
+            return False
+        node_idx = self.node_index_map.get(str(node_id))
+        if node_idx is None:
+            return True
+        dep_latency_hard = self._latency_cost_hard_only(svc, node_idx, placement)
+        return exec_time + dep_latency_hard <= period * (1.0 - PERIOD_JITTER_MARGIN)
+
     def validate_placement(self, placement: Dict[str, str], log_warnings: bool = True) -> List[str]:
         """Validate a placement against all constraints."""
         violations = []
@@ -147,6 +166,36 @@ class OrchestratorUtils:
                                 f"hard_dep_latency={dep_latency_hard:.6f}s, total={total_time:.6f}s > "
                                 f"effective_period={effective_period:.6f}s (margin={PERIOD_JITTER_MARGIN:.0%})"
                             )
+
+        # Capacity constraints of V(x): aggregated CPU (period-scaled), RAM (+ shared GPU
+        # memory) and GPU demand per node must fit the node's reported capacity. A node
+        # reported with zero capacity (e.g. NotReady) is therefore infeasible for any service.
+        demand: Dict[str, List[float]] = {}
+        for svc in self.services:
+            if getattr(svc, 'exclude_from_orchestration', False) or getattr(svc, 'is_daemonset', False):
+                continue
+            nid = placement.get(str(getattr(svc, 'service_id', '')))
+            node = self.node_map.get(nid) if nid else None
+            if node is None:
+                continue
+            cpu, ram, gpu, exec_time, period = self._service_demands(svc, nid)
+            if 0 < period < float('inf'):
+                cpu *= min(1.0, exec_time / period)
+            gpu_shared = bool(getattr(node, 'gpu_shared', False))
+            d = demand.setdefault(nid, [0.0, 0.0, 0.0])
+            d[0] += cpu
+            d[1] += ram + (gpu if gpu_shared else 0.0)
+            d[2] += gpu
+        for nid, (cpu, ram, gpu) in demand.items():
+            node = self.node_map[nid]
+            try:
+                caps = node.metrics.get_capacity()
+            except Exception:
+                continue
+            for label, used, cap in (("CPU", cpu, caps.get("cpu", 0.0)), ("RAM", ram, caps.get("ram_gb", 0.0)),
+                                     ("GPU", gpu, caps.get("gpu_gb", 0.0))):
+                if used > 1e-9 and used > float(cap) + 1e-6:
+                    violations.append(f"Capacity violation on {nid}: {label} {used:.2f} > {float(cap):.2f}")
         return violations
 
     def _service_demands(self, svc: Any, node_id: Optional[str] = None) -> tuple:
@@ -291,6 +340,32 @@ class OrchestratorUtils:
 
         return total
     
+    def total_dependency_latency(self, placement: Dict[str, str]) -> float:
+        """L_tot surrogate: sum over services of the full dependency-tree latency."""
+        total = 0.0
+        for svc in self.services:
+            if getattr(svc, 'exclude_from_orchestration', False):
+                continue
+            idx = self.node_index_map.get(str(placement.get(str(getattr(svc, 'service_id', '')), '')))
+            if idx is not None:
+                total += self._latency_cost_full(svc, idx, placement)
+        return total
+
+    @staticmethod
+    def hysteresis_accepts(cur_energy: float, new_energy: float, cur_latency: float,
+                           new_latency: float, threshold: float) -> Tuple[bool, float, float]:
+        """Hysteresis rule on both objectives (energy, latency).
+
+        A feasible candidate replaces a feasible current placement when one objective
+        improves by at least ``threshold`` (relative) while the other does not degrade by
+        more than ``threshold``. Returns (accept, energy_gain, latency_gain).
+        """
+        e_gain = (cur_energy - new_energy) / max(1.0, cur_energy)
+        l_gain = (cur_latency - new_latency) / max(1e-6, cur_latency)
+        accept = ((e_gain >= threshold and l_gain >= -threshold)
+                  or (l_gain >= threshold and e_gain >= -threshold))
+        return accept, e_gain, l_gain
+
     @staticmethod
     def get_latency_matrix(metrics_facade: Any) -> Optional[List[List[float]]]:
         """Fetch latency matrix from metrics facade.

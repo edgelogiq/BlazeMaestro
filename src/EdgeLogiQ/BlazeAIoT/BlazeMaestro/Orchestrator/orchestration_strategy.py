@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Sequence, Any, Optional
 import os
 from BlazeAIoT.Core.Utils import BlazeLogger
+from .orchestrator_utils import OrchestratorUtils
 
 
 class OrchestrationStrategy(ABC):
@@ -140,13 +141,8 @@ class OrchestrationContext:
             # Case 1: Current has violations → Always reassign if new is better
             if cur_violations > 0:
                 if new_violations <= cur_violations:
-                    # Check for flip-flops even when fixing violations
-                    flip_flops = self._count_flip_flops(new_assignment, current_assignment)
-                    if flip_flops > 0 and new_violations == cur_violations:
-                        if os.getenv('DEBUG_HYSTERESIS'):
-                            print(f"[HYSTERESIS] Keeping current (would flip-flop {flip_flops} services with same violations)")
-                        return current_assignment.copy()
-                    
+                    # Never keep an infeasible placement: any candidate that does not increase the
+                    # violation count is adopted immediately (anti-flip-flop only applies when feasible).
                     if os.getenv('DEBUG_HYSTERESIS'):
                         print(f"[HYSTERESIS] Reassigning to fix violations: {cur_violations} → {new_violations}")
                     self._update_placement_history(new_assignment)
@@ -171,9 +167,15 @@ class OrchestrationContext:
             else:
                 effective_threshold = hysteresis_threshold
             
-            # Apply hysteresis threshold for energy optimization
-            improvement_ratio = (cur_energy - new_energy) / max(1.0, cur_energy)
-            if improvement_ratio >= effective_threshold:
+            # Threshold on both objective values (energy and latency), not energy alone
+            utils = OrchestratorUtils(self.services, self.nodes, self.get_latency_matrix())
+            accept, e_gain, l_gain = OrchestratorUtils.hysteresis_accepts(
+                cur_energy, new_energy,
+                utils.total_dependency_latency(current_assignment),
+                utils.total_dependency_latency(new_assignment),
+                effective_threshold)
+            improvement_ratio = max(e_gain, l_gain)
+            if accept:
                 if os.getenv('DEBUG_HYSTERESIS'):
                     print(f"[HYSTERESIS] Reassigning for optimization: improvement={improvement_ratio:.2%} >= threshold={effective_threshold:.2%}")
                 self._update_placement_history(new_assignment)
@@ -216,6 +218,7 @@ class OrchestrationContext:
         latency_matrix = self.get_latency_matrix()
         has_latency_matrix = latency_matrix is not None and len(latency_matrix) > 0
 
+        period_utils = OrchestratorUtils(self.services, self.nodes, latency_matrix)
         for svc in self.services:
             sid = getattr(svc, 'service_id', None)
             if sid is None:
@@ -240,47 +243,9 @@ class OrchestrationContext:
                 logger.warning(f"[ASSIGNMENT_VIOLATION] unknown node '{nid}' for service={sid_str}")
                 continue
             
-            # Check period constraint (only for time-constrained services)
-            execution_rate_hz = 0.0
-            exec_time = None
-            per_node_usage = getattr(svc, "instance_usage_by_node", None)
-            if isinstance(per_node_usage, dict) and nid in per_node_usage:
-                node_usage = per_node_usage.get(nid) or {}
-                execution_rate_hz = float(node_usage.get("execution_rate_hz_max") or 0.0)
-                exec_time = node_usage.get("exec_time_max")
-            else:
-                execution_rate_hz = float(getattr(svc, 'execution_rate_hz', 0.0) or 0.0)
-                exec_times = [c.exec_time for c in getattr(svc, 'containers', []) if c.exec_time is not None]
-                exec_time = max(exec_times) if exec_times else None
-
-            if execution_rate_hz > 0:
-                period = 1.0 / execution_rate_hz
-                if exec_time is not None:
-                    dep_latency = 0.0
-                    for dep in getattr(svc, 'dependencies', []):
-                        dep_sid = getattr(dep, 'service_id', dep)
-                        dep_sid_str = str(dep_sid)
-                        dep_nid = assignment.get(dep_sid_str, None)
-
-                        if dep_nid is not None and has_latency_matrix:
-                            n_idx = node_index_map.get(nid)
-                            dep_n_idx = node_index_map.get(dep_nid)
-                            if n_idx is not None and dep_n_idx is not None:
-                                try:
-                                    lat = float(latency_matrix[dep_n_idx][n_idx])
-                                    dep_latency += lat
-                                except (IndexError, TypeError, ValueError):
-                                    pass
-
-                    total_time = exec_time + dep_latency
-                    if total_time > period:
-                        violations += 1
-                        prefix = f"[{orchestrator_name}] " if orchestrator_name else ""
-                        logger.info(
-                            f"{prefix}[PERIOD_VIOLATION] service={sid_str} node={nid}: "
-                            f"total_time={total_time:.6f}s > period={period:.6f}s "
-                            f"(exec_time={exec_time:.6f}s + dep_latency={dep_latency:.6f}s)"
-                        )
+            # Period part of V(x), shared with every orchestrator
+            if not period_utils.service_period_ok(svc, nid, assignment):
+                violations += 1
             
             # Add energy cost
             total_energy += self._estimate_energy(svc, node)

@@ -88,6 +88,7 @@ class BaseOrchestrator(ABC):
         node_index_map = {str(getattr(n, 'node_id', '')): i for i, n in enumerate(self.nodes)}
         latency_matrix = self._get_latency_matrix()
         
+        period_utils = OrchestratorUtils(self.services, self.nodes, self._get_latency_matrix())
         for svc in self.services:
             sid = getattr(svc, 'service_id', None)
             if sid is None:
@@ -116,25 +117,9 @@ class BaseOrchestrator(ABC):
                 )
                 continue
             
-            # Check period constraint
-            _, _, _, exec_time, period = self._service_demands(svc, nid)
-            if period < float('inf'):
-                # Use the full dependency tree latency calculation
-                node_idx = node_index_map.get(nid)
-                if node_idx is not None:
-                    dep_latency = self._latency_cost_full(svc, node_idx, assignment, latency_matrix, node_index_map, self.services)
-                    total_time = exec_time + dep_latency
-                    if total_time > period:
-                        violations += 1
-                        prefix = f"[{orchestrator_name}] " if orchestrator_name else ""
-                        logger.info(
-                            f"{prefix}[PERIOD_VIOLATION] service={sid_str} node={nid}: "
-                            f"total_time={total_time:.6f}s > period={period:.6f}s "
-                            f"(exec_time={exec_time:.6f}s + dep_latency={dep_latency:.6f}s)"
-                        )
-                else:
-                    # Node not found in index map, should not happen
-                    violations += 1
+            # Period part of V(x), shared with every orchestrator
+            if not period_utils.service_period_ok(svc, nid, assignment):
+                violations += 1
             
             # Add energy cost
             total_energy += self._estimate_energy(svc, node)
@@ -172,12 +157,8 @@ class BaseOrchestrator(ABC):
             # Case 1: Current has violations → Always reassign if new is better or equal
             if cur_violations > 0:
                 if new_violations <= cur_violations:
-                    flip_flops = self._count_flip_flops(new_assignment, current_assignment)
-                    if flip_flops > 0 and new_violations == cur_violations:
-                        if os.getenv('DEBUG_HYSTERESIS'):
-                            print(f"[HYSTERESIS] Keeping current (would flip-flop {flip_flops} services with same violations)")
-                        return current_assignment.copy()
-                    
+                    # Never keep an infeasible placement: any candidate that does not increase the
+                    # violation count is adopted immediately (anti-flip-flop only applies when feasible).
                     if os.getenv('DEBUG_HYSTERESIS'):
                         print(f"[HYSTERESIS] Reassigning to fix violations: {cur_violations} → {new_violations}")
                     self._update_placement_history(new_assignment)
@@ -202,8 +183,15 @@ class BaseOrchestrator(ABC):
             else:
                 effective_threshold = hysteresis_threshold
             
-            improvement_ratio = (cur_energy - new_energy) / max(1.0, cur_energy)
-            if improvement_ratio >= effective_threshold:
+            # Threshold on both objective values (energy and latency), not energy alone
+            utils = OrchestratorUtils(self.services, self.nodes, self._get_latency_matrix())
+            accept, e_gain, l_gain = OrchestratorUtils.hysteresis_accepts(
+                cur_energy, new_energy,
+                utils.total_dependency_latency(current_assignment),
+                utils.total_dependency_latency(new_assignment),
+                effective_threshold)
+            improvement_ratio = max(e_gain, l_gain)
+            if accept:
                 if os.getenv('DEBUG_HYSTERESIS'):
                     print(f"[HYSTERESIS] Reassigning for optimization: improvement={improvement_ratio:.2%} >= threshold={effective_threshold:.2%}")
                 self._update_placement_history(new_assignment)

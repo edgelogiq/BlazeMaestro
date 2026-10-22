@@ -301,6 +301,8 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
                     current_layer = getattr(node, 'layer_id', None)
                     break
         
+        from .orchestrator_utils import OrchestratorUtils
+        period_utils = OrchestratorUtils(self.services, self.nodes, self.latency_matrix)
         for node_idx, node in enumerate(self.nodes):
             # Check node lock
             locked_nid = getattr(svc, 'locked_node_id', None)
@@ -337,12 +339,9 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
             if not self._is_feasible(svc, nid, avail, caps, gpu_shared):
                 continue
             
-            # Check period + dependency latency feasibility
-            cpu, ram, gpu, exec_time, period = self._service_demands(svc, nid)
-            if period < float('inf'):
-                lat = self._latency_cost(svc, node_idx, placement_map)
-                if exec_time + lat > period:
-                    continue
+            # Period part of V(x), shared with every other orchestrator
+            if not period_utils.service_period_ok(svc, nid, placement_map):
+                continue
             
             feasible_nodes.append(node_idx)
         

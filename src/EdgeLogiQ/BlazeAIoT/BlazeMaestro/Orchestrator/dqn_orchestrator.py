@@ -347,6 +347,7 @@ class DQNOrchestrator(BaseOrchestrator):
             raise RuntimeError("DQN agent is not initialized; cannot run inference")
         
         agent = self._agent
+        self._apply_checkpoint_weights(agent)
 
         # Single inference pass (no training, just greedy action selection)
         fallback_assignment = self._build_fallback_assignment(self.services)
@@ -501,11 +502,31 @@ class DQNOrchestrator(BaseOrchestrator):
             'action_dim': self._action_dim,
         }, path)
         
+    def _apply_checkpoint_weights(self, agent) -> None:
+        """Copy the weights loaded by load_checkpoint() into the live agent (once).
+
+        The weight-loading step was dropped in a refactor (Feb 2026), so inference ran with
+        an untrained network; this restores it.
+        """
+        data = getattr(self, "_checkpoint_data", None)
+        if data is None or agent is None:
+            return
+        if data.get("state_dim") != self._state_dim or data.get("action_dim") != self._action_dim:
+            raise RuntimeError(
+                f"DQN checkpoint dimensions (state_dim={data.get('state_dim')}, action_dim={data.get('action_dim')}) "
+                f"do not match the current platform (state_dim={self._state_dim}, action_dim={self._action_dim})")
+        agent.model.load_state_dict(data["policy_net_state"])
+        agent.target.load_state_dict(data["target_net_state"])
+        agent.epsilon = data.get("epsilon", agent.epsilon)
+        agent.model.eval()
+        agent.target.eval()
+        self._checkpoint_data = None
+
     def load_checkpoint(self, path: str):
         """Load a trained DQN model from a checkpoint file and prepare for inference."""
         if not os.path.exists(path):
             raise FileNotFoundError(f"Checkpoint file not found: {path}")
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location="cpu" if not torch.cuda.is_available() else None)
         
         # Store dimensions for later use
         self._state_dim = checkpoint['state_dim']

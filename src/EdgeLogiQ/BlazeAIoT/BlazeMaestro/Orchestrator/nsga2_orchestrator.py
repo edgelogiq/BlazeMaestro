@@ -118,8 +118,18 @@ class NSGA2Orchestrator(BaseNSGA2Orchestrator):
         
         Objectives are: (violations, energy, latency) - all minimize
         """
+        # Constrained domination (Deb et al., 2002): a feasible solution (V(x)=0) always
+        # dominates an infeasible one; two infeasible solutions compare on violation count;
+        # two feasible solutions compare on Pareto dominance over (energy, latency).
+        v1, v2 = obj1[0], obj2[0]
+        if v1 == 0 and v2 > 0:
+            return True
+        if v1 > 0 and v2 == 0:
+            return False
+        if v1 > 0 and v2 > 0:
+            return v1 < v2
         at_least_one_better = False
-        for i in range(3):
+        for i in (1, 2):
             if obj1[i] > obj2[i]:
                 return False  # obj1 worse on this objective
             elif obj1[i] < obj2[i]:

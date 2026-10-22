@@ -230,6 +230,10 @@ class BaseNSGA2Orchestrator(BaseOrchestrator):
             node_ram[node_idx] += float(usage.get('ram', 0.0))
             node_gpu[node_idx] += float(usage.get('gpu', 0.0))
 
+        # Shared period test of V(x) (same rule as every other orchestrator)
+        period_utils = OrchestratorUtils(self.services, self.nodes, OrchestratorUtils.get_latency_matrix(self.metrics))
+        placement_map = {str(getattr(sv, "service_id", k)): str(getattr(self.nodes[int(a)], "node_id", ""))
+                         for k, (sv, a) in enumerate(zip(self.services, assignment))}
         for s_idx, n_idx in enumerate(assignment):
             svc = self.services[s_idx]
             node = self.nodes[n_idx]
@@ -278,46 +282,13 @@ class BaseNSGA2Orchestrator(BaseOrchestrator):
             # Energy calculation (0 for grid-powered nodes)
             total_energy += OrchestratorUtils.estimate_energy(svc, node)
 
-            # Latency: sequential between services + dependency wait
-            if s_idx > 0:
-                try:
-                    latency_matrix = OrchestratorUtils.get_latency_matrix(self.metrics)
-                    # If latency matrix not available, try to generate it
-                    if latency_matrix is None and self.metrics and hasattr(self.metrics, 'get_latency_matrix'):
-                        try:
-                            latency_matrix = self.metrics.get_latency_matrix(self.nodes)
-                        except:
-                            pass
-                    
-                    prev_idx = int(assignment[s_idx - 1])
-                    cur_idx = int(n_idx)
-                    total_latency += float(latency_matrix[prev_idx][cur_idx]) if latency_matrix is not None else 0.0
-                except (IndexError, ValueError, TypeError):
-                    total_latency += 0.0
-
+            # L_tot(x) = sum_s L_s(x): transitive latency over blocking dependencies only (paper Eq. ltot_def)
             # Get network latency for this service's dependencies only
             service_network_latency = self._dependency_wait(s_idx, n_idx, assignment)
             total_latency += service_network_latency
 
-            # Check period constraints - TWO LEVELS:
-            # 1. HARD: exec_time must fit within period (hard real-time constraint)
-            # 2. SOFT: exec_time + hard_dep_latency must fit (only 'hard' constraint_level dependencies)
-            
-            # Match the test validation logic exactly
-            # For reliable exec times: 5% tolerance, for unreliable: 15% tolerance
-            # Since we don't track reliability here, use conservative 5% tolerance
-            tolerance_factor = 1.05
-            
-            if period < float('inf'):
-                # Hard constraint: execution time alone must fit in period
-                if exec_time > period * tolerance_factor:
-                    period_violations += 1
-                else:
-                    # Soft constraint: only hard dependencies count toward period budget
-                    service_network_latency_hard = self._dependency_wait(s_idx, n_idx, assignment, hard_only=True)
-                    total_service_time = exec_time + service_network_latency_hard
-                    if total_service_time > period * tolerance_factor:
-                        period_violations += 1
+            if period < float('inf') and not period_utils.service_period_ok(svc, nid, placement_map):
+                period_violations += 1
 
         return total_energy, total_latency, period_violations, valid
 

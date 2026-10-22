@@ -65,21 +65,7 @@ class GreedyWeightedOrchestrator(BaseOrchestrator):
         cpu, ram, gpu, exec_time, period = self._service_demands(svc, node_id)
         needed_ram = ram + (gpu if gpu_shared else 0.0)
         
-        # Prefer per-node timing when available; otherwise fall back to service-level estimate
-        per_node_usage = getattr(svc, "instance_usage_by_node", {}).get(node_id)
-        if per_node_usage and per_node_usage.get("exec_time_max") is not None:
-            exec_time = float(per_node_usage["exec_time_max"])
-            tolerance_factor = 1.05
-        else:
-            if hasattr(svc, 'get_execution_time'):
-                exec_time, is_reliable = svc.get_execution_time()
-                tolerance_factor = 1.05 if is_reliable else 1.2
-            else:
-                tolerance_factor = 1.2
-        
-        # Execution rate constraint with dynamic tolerance (only for time-constrained services)
-        if exec_time is not None and period < float('inf') and exec_time > period * tolerance_factor:
-            return False
+        # Period feasibility is checked with the shared V(x) test (OrchestratorUtils.service_period_ok)
         if avail.get("cpu", 0.0) < cpu:
             return False
         if avail.get("ram_gb", 0.0) < needed_ram:
@@ -211,16 +197,9 @@ class GreedyWeightedOrchestrator(BaseOrchestrator):
         candidate_idx = self._node_index.get(nid)
         lat = self._latency_cost(svc, candidate_idx, placement) if candidate_idx is not None else 0.0
         
-        # Check period constraint - HARD CONSTRAINT ONLY for feasibility:
-        # HARD: exec_time must fit within period (hard real-time constraint)
-        # SOFT: exec_time + hard_dep_latency > period is only reported, not enforced for feasibility
-        _, _, _, exec_time, period = self._service_demands(svc, nid)
-        if period < float('inf'):
-            # Hard constraint: execution time alone must fit in period (this DOES reject the placement)
-            if exec_time > period:
-                return None
-            # Note: Soft constraint violations are tracked but do NOT cause rejection
-            # The validation logic will report them separately
+        # Period part of V(x), shared with every other orchestrator
+        if not OrchestratorUtils(self.services, self.nodes, self._get_latency_matrix()).service_period_ok(svc, nid, placement):
+            return None
         
         # Calculate balance cost
         sim_avail = dict(avail)
