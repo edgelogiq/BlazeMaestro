@@ -193,8 +193,13 @@ class DQNEnvironment:
         allow_violations: bool = False,
         allow_period_violations: bool = False,
         dependency_wait_func = None,
+        utilization_limit: Optional[float] = None,
     ) -> List[int]:
-        """Get valid node indices for current service."""
+        """Get valid node indices for current service.
+
+        utilization_limit overrides the default per-node capacity bound (0.75, or 0.95 when
+        resource violations are allowed); inference uses 1.0, the bound of V(x).
+        """
         s_idx = self.state["s_idx"]
         if s_idx >= self.num_services:
             return list(range(self.num_nodes))
@@ -204,7 +209,8 @@ class DQNEnvironment:
         locked_layer = getattr(svc, 'locked_layer_id', None)
         valid_indices = []
         
-        utilization_limit = 0.75 if not allow_violations else 0.95
+        if utilization_limit is None:
+            utilization_limit = 0.75 if not allow_violations else 0.95
         
         for n_idx in range(self.num_nodes):
             node = self.nodes[n_idx]

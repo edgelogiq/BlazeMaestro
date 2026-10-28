@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import random
 import os
 from typing import Any, List, Sequence, Tuple, Optional, Callable, Dict
@@ -89,6 +90,7 @@ class DQNOrchestrator(BaseOrchestrator):
         self._previous_assignment: Optional[List[int]] = None
         self._trained_agent: Optional[Any] = self._agent
         self.debug = False
+        self.backtrack_budget = 5000  # max placement trials per decision (bounds decision time)
 
 
     # ---------- DQN infra (lazy torch import) ----------
@@ -359,33 +361,46 @@ class DQNOrchestrator(BaseOrchestrator):
             fallback_assignment=fallback_assignment,
         )
         state = env.reset()
-        step_count = 0
 
-        while env.state["s_idx"] < self.num_services and step_count < 1000:
-            # Get valid actions
-            valid_actions = env.get_valid_actions(
+        # Depth-first placement in Q-value order with backtracking: when a service has no
+        # feasible node, revisit the previous choices instead of failing the whole decision.
+        # Capacity bound = 1.0, the bound of V(x) shared by every orchestrator.
+        budget = [self.backtrack_budget]
+
+        def ranked_actions(state_vec, valid):
+            agent.model.eval()
+            with torch.no_grad():
+                q = agent.model(torch.FloatTensor(state_vec).unsqueeze(0).to(agent.device)).squeeze(0)
+            return sorted(valid, key=lambda a: float(q[a]) if a < q.size(0) else float("-inf"), reverse=True)
+
+        def place(state_vec) -> bool:
+            if env.state["s_idx"] >= self.num_services:
+                return True
+            valid = env.get_valid_actions(
                 allow_violations=False,
                 dependency_wait_func=self._dependency_wait,
+                utilization_limit=1.0,
             )
+            for action in ranked_actions(state_vec, valid):
+                if budget[0] <= 0:
+                    return False
+                budget[0] -= 1
+                saved = copy.deepcopy(env.state)
+                placed = len(env.state["assign"])
+                next_state, _, _ = env.step(
+                    action,
+                    dependency_wait_func=self._dependency_wait,
+                    nodes=self.nodes,
+                    allow_violations=False,
+                    allow_period_violations=False,
+                )
+                if len(env.state["assign"]) == placed + 1 and place(next_state):
+                    return True
+                env.state = saved
+            return False
 
-            if not valid_actions:
-                raise RuntimeError("No valid actions available for current service")
-
-            # Select action (greedy, temperature=0.0 means no exploration)
-            action = agent.select(state, valid_actions, temperature=0.0)
-            
-            # Step environment (deployment: enforce period constraints strictly)
-            state, _, done = env.step(
-                action,
-                dependency_wait_func=self._dependency_wait,
-                nodes=self.nodes,
-                allow_violations=False,
-                allow_period_violations=False,
-            )
-            
-            step_count += 1
-            if done:
-                break
+        if not place(state):
+            raise RuntimeError("No feasible placement found by DQN inference (backtracking exhausted)")
 
         # Extract best assignment from environment
         best_assign = list(env.state["assign"]) if len(env.state["assign"]) == self.num_services else None
