@@ -50,6 +50,7 @@ class GreedyWeightedOrchestrator(BaseOrchestrator):
             random.seed(random_seed)
         self.weights = weights or OrchestratorWeights()
         self.verbose = verbose
+        self.backtrack_budget = 5000  # max placement trials per decision (bounds decision time)
         
         # Map node_id -> index for quick lookups
         self._node_index: Dict[str, int] = {str(getattr(n, "node_id", i)): i for i, n in enumerate(self.nodes)}
@@ -161,17 +162,12 @@ class GreedyWeightedOrchestrator(BaseOrchestrator):
             if locked_layer is not None and node_layer != locked_layer:
                 continue
             
-            # Check multi-layer layer preservation
+            # Multi-layer services may use any of their allowed layers (no layer preservation,
+            # which is not part of V(x))
             if getattr(svc, 'multi_layer', False):
                 allowed_layers = getattr(svc, 'layers', [])
-                if allowed_layers:
-                    # If currently placed and in an allowed layer, restrict to that layer
-                    if current_layer and current_layer in allowed_layers:
-                        if node_layer != current_layer:
-                            continue
-                    # If not currently placed, allow any allowed layer
-                    elif node_layer not in allowed_layers:
-                        continue
+                if allowed_layers and node_layer not in allowed_layers:
+                    continue
             
             candidate_nodes.append(n)
         
@@ -238,56 +234,46 @@ class GreedyWeightedOrchestrator(BaseOrchestrator):
         if hasattr(self, '_current_assignment') and self._current_assignment:
             placement = dict(self._current_assignment)
         
-        # Place services in topological order
-        for svc in self._topological_sort(svcs):
-            # Get candidate nodes (respecting locks and multi-layer preservation)
-            candidate_nodes = self._filter_candidate_nodes(svc, placement)
-            
-            # Evaluate all candidates
+        # Place services in topological order, depth-first in (energy, latency, balance) order
+        # with backtracking: when a service has no feasible candidate, revisit earlier choices
+        # instead of failing the whole decision.
+        import copy as _copy
+        order = self._topological_sort(svcs)
+        budget = [self.backtrack_budget]
+
+        def place(i: int) -> bool:
+            if i == len(order):
+                return True
+            svc = order[i]
+            sid = str(getattr(svc, "service_id", ""))
             candidates = []
-            for n in candidate_nodes:
-                candidate = self._evaluate_candidate_node(svc, n, placement, node_avail, node_caps, node_gpu_shared)
-                if candidate:
-                    candidates.append(candidate)
-            
-            # Select best candidate (no fallback)
-            if not candidates:
-                svc_id = getattr(svc, 'service_id', svc)
-                # Log detailed diagnostic info for debugging
-                if self.verbose:
-                    print(f"\n[GreedyWeightedOrchestrator] DIAGNOSTICS for {svc_id}:")
-                    cpu, ram, gpu, _, _ = self._service_demands(svc)
-                    print(f"  Service demands: cpu={cpu:.3f}, ram={ram:.3f}GB, gpu={gpu:.3f}GB")
-                    
-                    print(f"  Candidate nodes evaluated:")
-                    for n in candidate_nodes:
-                        nid = str(getattr(n, 'node_id', ''))
-                        caps = node_caps[nid]
-                        avail = node_avail[nid]
-                        gshared = node_gpu_shared[nid]
-                        print(f"    {nid}:")
-                        print(f"      Capacity: cpu={caps.get('cpu', 0):.1f}, ram={caps.get('ram_gb', 0):.1f}GB, gpu={caps.get('gpu_gb', 0):.1f}GB")
-                        print(f"      Available: cpu={avail.get('cpu', 0):.3f}, ram={avail.get('ram_gb', 0):.3f}GB, gpu={avail.get('gpu_gb', 0):.3f}GB")
-                        needed_ram = ram + (gpu if gshared else 0.0)
-                        cpu_ok = avail.get("cpu", 0.0) >= cpu
-                        ram_ok = avail.get("ram_gb", 0.0) >= needed_ram
-                        gpu_ok = gpu <= 0.0 or caps.get("gpu_gb", 0.0) >= gpu
-                        print(f"      Feasibility: cpu_ok={cpu_ok}, ram_ok={ram_ok}, gpu_ok={gpu_ok}")
-                        _, _, _, exec_time_n, period_n = self._service_demands(svc, nid)
-                        if exec_time_n is not None and period_n < float('inf'):
-                            time_ok = exec_time_n <= period_n
-                            print(f"      Timing: exec_time={exec_time_n:.3f}s <= period={period_n:.3f}s? {time_ok}")
-                
-                raise RuntimeError(
-                    f"No feasible candidates for service {svc_id}"
-                )
-            
-            # Select best candidate by (energy, latency, balance)
+            for n in self._filter_candidate_nodes(svc, placement):
+                c = self._evaluate_candidate_node(svc, n, placement, node_avail, node_caps, node_gpu_shared)
+                if c:
+                    candidates.append(c)
             candidates.sort(key=lambda c: (c["energy"], c["latency"], c["balance"]))
-            best = candidates[0]
-            placement[str(getattr(svc, "service_id", ""))] = best["nid"]
-            self._apply_allocation(svc, node_avail[best["nid"]], best["gshared"])
-        
+            for c in candidates:
+                if budget[0] <= 0:
+                    return False
+                budget[0] -= 1
+                saved_avail = _copy.deepcopy(node_avail[c["nid"]])
+                prev = placement.get(sid)
+                placement[sid] = c["nid"]
+                self._apply_allocation(svc, node_avail[c["nid"]], c["gshared"])
+                if place(i + 1):
+                    return True
+                node_avail[c["nid"]] = saved_avail
+                if prev is None:
+                    placement.pop(sid, None)
+                else:
+                    placement[sid] = prev
+            return False
+
+        if not place(0):
+            raise RuntimeError("No feasible placement found by Greedy Weighted (backtracking exhausted)")
+        # Every service passed the shared V(x) checks during the search: no repair pass needed.
+        return placement
+
         if not placement:
             if self.verbose:
                 print("[GreedyWeighted] No valid placement generated. Check assignment logic.")
@@ -442,13 +428,11 @@ class GreedyWeightedOrchestrator(BaseOrchestrator):
             if locked_layer is not None and alt_node_layer != locked_layer:
                 continue
             
-            # Check multi-layer layer preservation
+            # Multi-layer services may use any of their allowed layers
             if getattr(svc, 'multi_layer', False):
                 allowed_layers = getattr(svc, 'layers', [])
-                if allowed_layers and current_layer and current_layer in allowed_layers:
-                    # Must stay in current layer
-                    if alt_node_layer != current_layer:
-                        continue
+                if allowed_layers and alt_node_layer not in allowed_layers:
+                    continue
             
             # Check capacity
             alt_caps = node_caps[alt_nid]

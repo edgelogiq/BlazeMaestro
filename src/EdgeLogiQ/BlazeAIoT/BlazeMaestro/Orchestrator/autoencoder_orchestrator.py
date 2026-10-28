@@ -68,6 +68,7 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
         self.lr = lr
         self.batch_size = batch_size
         self.temperature = temperature
+        self.backtrack_budget = 5000  # max placement trials per decision (bounds decision time)
         
         # Map node_id -> index for quick lookups
         self._node_index: Dict[str, int] = {str(getattr(n, "node_id", i)): i for i, n in enumerate(self.nodes)}
@@ -249,15 +250,41 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
             node_usage[node_idx]["ram"] += float(usage.get("ram", 0.0))
             node_usage[node_idx]["gpu"] += float(usage.get("gpu", 0.0))
         
-        for svc in topo_svcs:
+        # Depth-first decoding in probability order with backtracking: when a service has no
+        # feasible node, revisit earlier choices instead of failing the whole decision.
+        import copy as _copy
+        budget = [self.backtrack_budget]
+
+        def place(i: int) -> bool:
+            if i == len(topo_svcs):
+                return True
+            svc = topo_svcs[i]
             svc_idx = svc_idx_map[id(svc)]
-            node_idx = self._select_best_node_for_service(svc, svc_idx, placement_probs, node_usage, placement_map)
-            placement[svc_idx] = node_idx
-            placement_map[str(getattr(svc, 'service_id', svc_idx))] = str(getattr(self.nodes[node_idx], 'node_id', node_idx))
-            
-            # Update node usage
-            self._update_node_usage(node_idx, svc, node_usage)
-        
+            sid = str(getattr(svc, 'service_id', svc_idx))
+            feasible = self._find_feasible_nodes(svc, node_usage, placement_map)
+            probs = placement_probs[svc_idx].cpu().numpy()
+            for node_idx in sorted(feasible, key=lambda k: float(probs[k]), reverse=True):
+                if budget[0] <= 0:
+                    return False
+                budget[0] -= 1
+                saved_usage = _copy.deepcopy(node_usage)
+                prev = placement_map.get(sid)
+                placement[svc_idx] = int(node_idx)
+                placement_map[sid] = str(getattr(self.nodes[node_idx], 'node_id', node_idx))
+                self._update_node_usage(int(node_idx), svc, node_usage)
+                if place(i + 1):
+                    return True
+                node_usage.clear(); node_usage.update(saved_usage)
+                placement.pop(svc_idx, None)
+                if prev is None:
+                    placement_map.pop(sid, None)
+                else:
+                    placement_map[sid] = prev
+            return False
+
+        if not place(0):
+            raise RuntimeError("No feasible placement found by autoencoder decoding (backtracking exhausted)")
+
         return placement
 
     def _select_best_node_for_service(self, svc: Any, svc_idx: int, placement_probs: Any, 
@@ -316,18 +343,13 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
                 if node_layer != locked_layer:
                     continue
 
-            # Enforce multi-layer layer preservation: services stay in their current layer
+            # Multi-layer services may use any of their allowed layers (no layer preservation,
+            # which is not part of V(x))
             node_layer = getattr(node, 'layer_id', None)
             if getattr(svc, 'multi_layer', False):
                 allowed_layers = getattr(svc, 'layers', [])
-                if allowed_layers:
-                    # If currently placed and in an allowed layer, restrict to that layer
-                    if current_layer and current_layer in allowed_layers:
-                        if node_layer != current_layer:
-                            continue
-                    # If not currently placed or current layer unknown, allow any allowed layer
-                    elif node_layer not in allowed_layers:
-                        continue
+                if allowed_layers and node_layer not in allowed_layers:
+                    continue
 
             # Check resource feasibility
             nid = str(getattr(node, 'node_id', ''))
