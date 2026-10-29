@@ -1,6 +1,4 @@
 """
-compare_orchestrators_dynamic_ros.py
-
 Dynamic comparison for a ROS-based scenario:
 - frank-1 runs camera (Intel RealSense, 30Hz), IMU (100Hz), encoder (50Hz)
 - slam_toolbox (anywhere), depends on camera/IMU/encoder
@@ -22,7 +20,7 @@ import sys
 import random
 from typing import List
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Simulator.platform_topology import PlatformTopology
-from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Simulator.service_simulator import Service, ContainerSpec, DependencySpec
+from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Simulator.service_simulator import Service
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Topology.service_loader import ServiceDefinitionLoader
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Orchestrator.dqn_orchestrator import DQNOrchestrator
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Orchestrator.nsga2_orchestrator import NSGA2Orchestrator
@@ -202,7 +200,7 @@ def main():
     print(f"Orchestrators: {', '.join(orchestrators.keys())}")
     print(f"{'='*80}\n")
 
-    # Dynamic scenario loop (copied from compare_orchestrators_dynamic.py)
+    # Dynamic scenario loop
     
     scenario = ROSDynamicScenario(duration_minutes=args.duration, time_step_minutes=args.time_step)
     
@@ -301,7 +299,7 @@ def main():
                 if len(violations) > 3:
                     print(f"    ... and {len(violations)-3} more")
 
-    # Final summary (copied from compare_orchestrators_dynamic.py)
+    # Final summary
     print(f"\n{'='*80}")
     print(f"FINAL SUMMARY - Dynamic Scenario Results")
     print(f"{'='*80}\n")

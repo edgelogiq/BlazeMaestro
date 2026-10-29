@@ -66,17 +66,6 @@ class PerNodeAllocationEmitter:
             except Exception as e:
                 BlazeLogger.get_instance().debug('Prometheus gauge emit failed: %s', e)
 
-    def emit_for_service(self, service_id: str, all_nodes: Sequence[str], selected_node: Optional[str], eligible_nodes: Sequence[str]):
-        """Convenience to emit for all nodes for one service in one call."""
-        eligible_set = set(eligible_nodes or [])
-        for node_id in all_nodes:
-            self.emit(
-                service_id=service_id,
-                node_id=node_id,
-                eligible=(node_id in eligible_set),
-                selected=(selected_node == node_id)
-            )
-
     def emit_allocation_summary(self, service_id: str, original_node: Optional[str], 
                                recommended_node: Optional[str], eligible_nodes: Sequence[str],
                                reason: str = ''):
@@ -90,7 +79,4 @@ class PerNodeAllocationEmitter:
             eligible_nodes: List of nodes where service can run
             reason: Optional explanation for the change
         """
-        original_layer = self.node_to_layer.get(original_node, 'unknown') if original_node else 'unallocated'
-        recommended_layer = self.node_to_layer.get(recommended_node, 'unknown') if recommended_node else 'unallocated'
-        eligible_count = len(eligible_nodes) if eligible_nodes else 0
         

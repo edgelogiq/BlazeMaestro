@@ -3,7 +3,7 @@ Service Manager Module - Single Responsibility Principle
 Manages service discovery, expansion, and allocation tracking.
 """
 from BlazeAIoT.Core.Utils import BlazeLogger
-from typing import Dict, List, Optional
+from typing import Dict, List
 import os
 import shutil
 
@@ -154,96 +154,7 @@ class ServiceManager:
             self._logger.debug("No changes in services_update.xml; skipping overwrite")
             return False
 
-    def set_services(self, services: List):
-        """Set the services list."""
-        self.services = services
-
-    def set_current_allocation(self, allocation: Dict):
-        """Set current service allocation."""
-        self.current_allocation = allocation
-
-    def set_current_pod_refs(self, pod_refs: Dict):
-        """Set current pod references."""
-        self.current_pod_refs = pod_refs
-
-    def add_locked_service(self, service_id: str):
-        """Mark a service as locked (cannot be rescheduled)."""
-        self.locked_services.add(service_id)
-
     def get_services(self) -> List:
         """Get the services list."""
         return self.services
 
-    def get_current_allocation(self) -> Dict:
-        """Get current service allocation."""
-        return self.current_allocation
-
-    def get_current_pod_refs(self) -> Dict:
-        """Get current pod references."""
-        return self.current_pod_refs
-
-    def get_locked_services(self) -> set:
-        """Get set of locked services."""
-        return self.locked_services
-
-    def collect_measured_usage_from_services(self) -> dict:
-        """
-        Collect measured resource usage from all services.
-        
-        Returns:
-            Dictionary mapping service_id to usage metrics
-        """
-        if not self.services:
-            return {}
-
-        measured_usage = {}
-        for service in self.services:
-            service_id = service.service_id
-            
-            # Aggregate usage across all containers in the service
-            total_cpu = 0.0
-            total_ram = 0.0
-            container_count = 0
-            
-            for container in service.containers:
-                if hasattr(container, 'measured_cpu') and container.measured_cpu is not None:
-                    total_cpu += container.measured_cpu
-                if hasattr(container, 'measured_ram') and container.measured_ram is not None:
-                    total_ram += container.measured_ram
-                container_count += 1
-            
-            if container_count > 0:
-                measured_usage[service_id] = {
-                    'cpu': total_cpu,
-                    'ram_gb': total_ram,
-                    'container_count': container_count
-                }
-        
-        return measured_usage
-
-    def log_all_services_allocation(self):
-        """Log current allocation for all services."""
-        if not self.services or not self.current_allocation:
-            self._logger.debug("No services or allocation to log")
-            return
-
-        self._logger.info("=" * 80)
-        self._logger.info("CURRENT SERVICE ALLOCATION")
-        self._logger.info("=" * 80)
-        
-        for service in self.services:
-            service_id = service.service_id
-            allocation = self.current_allocation.get(service_id, [])
-            
-            if not allocation:
-                self._logger.info(f"Service: {service_id} - NOT ALLOCATED")
-                continue
-            
-            self._logger.info(f"Service: {service_id}")
-            for i, alloc in enumerate(allocation, 1):
-                node = alloc.get('node', 'unknown')
-                pod = alloc.get('pod', 'unknown')
-                layer = alloc.get('layer', 'unknown')
-                self._logger.info(f"  Instance {i}: node={node}, pod={pod}, layer={layer}")
-        
-        self._logger.info("=" * 80)

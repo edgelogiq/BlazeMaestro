@@ -8,7 +8,7 @@ Key rule: After IP resolution, each (pod_name, node) pair should be unique.
 """
 
 import xml.etree.ElementTree as ET
-from typing import Dict, List
+from typing import Dict
 from BlazeAIoT.Core.Utils import BlazeLogger
 
 

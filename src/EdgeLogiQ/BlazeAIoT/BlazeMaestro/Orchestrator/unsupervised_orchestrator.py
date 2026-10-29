@@ -127,27 +127,17 @@ class GreedyWeightedOrchestrator(BaseOrchestrator):
         return node_caps, node_avail, node_gpu_shared
 
     def _filter_candidate_nodes(self, svc: Any, placement: Optional[Dict[str, str]] = None) -> List[Any]:
-        """Filter nodes based on lock constraints and multi-layer preservation.
+        """Filter nodes based on lock constraints and the service's allowed layers.
         
         Args:
             svc: Service to filter nodes for
-            placement: Current placement map (optional, for multi-layer layer preservation)
+            placement: Current placement map (unused)
         
         Returns:
             List of candidate nodes
         """
         locked_nid = getattr(svc, 'locked_node_id', None)
         locked_layer = getattr(svc, 'locked_layer_id', None)
-        
-        # Get current placement to preserve layer for multi-layer services
-        current_layer = None
-        if placement and getattr(svc, 'multi_layer', False):
-            current_node_id = placement.get(str(getattr(svc, 'service_id', '')))
-            if current_node_id:
-                for node in self.nodes:
-                    if str(getattr(node, 'node_id', '')) == current_node_id:
-                        current_layer = getattr(node, 'layer_id', None)
-                        break
         
         candidate_nodes = []
         for n in self.nodes:
@@ -229,7 +219,7 @@ class GreedyWeightedOrchestrator(BaseOrchestrator):
         # Initialize node resource tracking
         node_caps, node_avail, node_gpu_shared = self._initialize_node_resources(exclude_services=svcs)
         
-        # Initialize placement with current assignment for multi-layer layer preservation
+        # Seed with the current assignment so services outside svcs keep their node
         placement: Dict[str, str] = {}
         if hasattr(self, '_current_assignment') and self._current_assignment:
             placement = dict(self._current_assignment)
@@ -274,198 +264,6 @@ class GreedyWeightedOrchestrator(BaseOrchestrator):
         # Every service passed the shared V(x) checks during the search: no repair pass needed.
         return placement
 
-        if not placement:
-            if self.verbose:
-                print("[GreedyWeighted] No valid placement generated. Check assignment logic.")
-                print(f"Services: {self.services}")
-                print(f"Nodes: {self.nodes}")
-            return {}
-
-        # Post-placement validation uses full placement (captures cyclic/feedback latency)
-        # Re-initialize baseline resources to avoid double-counting allocations
-        v_caps, v_avail, v_gpu_shared = self._initialize_node_resources(exclude_services=svcs)
-        placement = self._validate_and_fix_placement(placement, svcs, v_caps, v_avail, v_gpu_shared)
-
-        return placement
-
-    def _validate_and_fix_placement(self, placement: Dict[str, str], svcs: List[Any],
-                                   node_caps: Dict[str, Dict[str, float]],
-                                   node_avail: Dict[str, Dict[str, float]],
-                                   node_gpu_shared: Dict[str, bool]) -> Dict[str, str]:
-        """Validate placement and fix violations through reassignment."""
-        # Calculate baseline usage
-        baseline_usage = {}
-        for nid, caps in node_caps.items():
-            baseline_usage[nid] = {
-                "cpu": max(0.0, caps["cpu"] - node_avail[nid]["cpu"]),
-                "ram": max(0.0, caps["ram_gb"] - node_avail[nid]["ram_gb"]),
-                "gpu": 0.0
-            }
-        
-        modified = True
-        max_iterations = 50
-        iteration_count = 0
-        
-        while modified and iteration_count < max_iterations:
-            modified = False
-            iteration_count += 1
-            
-            # Recalculate current usage
-            current_usage = {nid: dict(u) for nid, u in baseline_usage.items()}
-            for svc in svcs:
-                sid = str(getattr(svc, "service_id", ""))
-                if sid in placement:
-                    nid = placement[sid]
-                    if nid in current_usage:
-                        cpu, ram, gpu, exec_time, period = self._service_demands(svc)
-                        if period > 0 and period < float('inf'):
-                            cpu = cpu * min(1.0, exec_time / period)
-                        gshared = node_gpu_shared[nid]
-                        current_usage[nid]["cpu"] += cpu
-                        current_usage[nid]["ram"] += ram + (gpu if gshared else 0.0)
-                        current_usage[nid]["gpu"] += gpu
-            
-            # Check each service for violations
-            for svc in self._topological_sort(svcs):
-                sid = str(getattr(svc, "service_id", ""))
-                if sid not in placement:
-                    continue
-                
-                if self._check_and_fix_service_violation(svc, sid, placement, current_usage, 
-                                                         node_caps, node_gpu_shared):
-                    modified = True
-                    break
-        
-        return placement
-
-    def _check_and_fix_service_violation(self, svc: Any, sid: str, placement: Dict[str, str],
-                                        current_usage: Dict[str, Dict[str, float]],
-                                        node_caps: Dict[str, Dict[str, float]],
-                                        node_gpu_shared: Dict[str, bool]) -> bool:
-        """Check if service has violations and fix if needed.
-        
-        Returns:
-            True if placement was modified
-        """
-        assigned_nid = placement[sid]
-        caps = node_caps[assigned_nid]
-        cpu, ram, gpu, exec_time, period = self._service_demands(svc)
-        
-        # Check utilization
-        u = current_usage[assigned_nid]
-        cpu_util = u["cpu"] / caps["cpu"] if caps["cpu"] > 0 else (1.0 if u["cpu"] > 0 else 0.0)
-        ram_util = u["ram"] / caps["ram_gb"] if caps["ram_gb"] > 0 else (1.0 if u["ram"] > 0 else 0.0)
-        gpu_util = u["gpu"] / caps["gpu_gb"] if caps.get("gpu_gb", 0) > 0 else (1.0 if u["gpu"] > 0 else 0.0)
-        
-        # Check period violation
-        period_violation = False
-        if period < float('inf'):
-            assigned_idx = self._node_index.get(assigned_nid)
-            if assigned_idx is not None:
-                lat = self._latency_cost(svc, assigned_idx, placement)
-                if exec_time + lat > period:
-                    period_violation = True
-        
-        # Check lock violations
-        lock_violation = False
-        locked_nid = getattr(svc, 'locked_node_id', None)
-        if locked_nid is not None and str(locked_nid) != assigned_nid:
-            lock_violation = True
-        locked_layer = getattr(svc, 'locked_layer_id', None)
-        if locked_layer is not None:
-            assigned_node = next((n for n in self.nodes if str(getattr(n, 'node_id', '')) == assigned_nid), None)
-            if assigned_node and getattr(assigned_node, 'layer_id', None) != locked_layer:
-                lock_violation = True
-        
-        # If violations, find alternative
-        if cpu_util > 1.0 or ram_util > 1.0 or gpu_util > 1.0 or period_violation or lock_violation:
-            best_alt_nid = self._find_alternative_node(svc, assigned_nid, placement, current_usage, 
-                                                       node_caps, node_gpu_shared)
-            if best_alt_nid is not None:
-                placement[sid] = best_alt_nid
-                if self.verbose:
-                    alt_u = current_usage[best_alt_nid]
-                    alt_caps = node_caps[best_alt_nid]
-                    alt_util = max((alt_u["cpu"] + cpu) / alt_caps["cpu"] if alt_caps["cpu"] > 0 else 1.0,
-                                 (alt_u["ram"] + ram) / alt_caps["ram_gb"] if alt_caps["ram_gb"] > 0 else 1.0)
-                    print(f"[GreedyWeighted] Reassigned {sid} from {assigned_nid} to {best_alt_nid} (util={alt_util:.0%})")
-                return True
-        
-        return False
-
-    def _find_alternative_node(self, svc: Any, current_nid: str, placement: Dict[str, str],
-                              current_usage: Dict[str, Dict[str, float]],
-                              node_caps: Dict[str, Dict[str, float]],
-                              node_gpu_shared: Dict[str, bool]) -> Optional[str]:
-        """Find alternative node with lower utilization, preserving layer for multi-layer services."""
-        locked_nid = getattr(svc, 'locked_node_id', None)
-        locked_layer = getattr(svc, 'locked_layer_id', None)
-        cpu, ram, gpu, exec_time, period = self._service_demands(svc)
-        
-        # Get current layer for multi-layer services
-        current_layer = None
-        if getattr(svc, 'multi_layer', False):
-            current_node = next((n for n in self.nodes if str(getattr(n, 'node_id', '')) == current_nid), None)
-            if current_node:
-                current_layer = getattr(current_node, 'layer_id', None)
-        
-        best_alt_nid = None
-        best_alt_util = 1.0
-        
-        for alt_nid in node_caps.keys():
-            if alt_nid == current_nid:
-                continue
-            
-            alt_node = next((n for n in self.nodes if str(getattr(n, 'node_id', '')) == alt_nid), None)
-            if not alt_node:
-                continue
-            
-            alt_node_layer = getattr(alt_node, 'layer_id', None)
-            
-            # Check locks
-            if locked_nid is not None and str(locked_nid) != alt_nid:
-                continue
-            if locked_layer is not None and alt_node_layer != locked_layer:
-                continue
-            
-            # Multi-layer services may use any of their allowed layers
-            if getattr(svc, 'multi_layer', False):
-                allowed_layers = getattr(svc, 'layers', [])
-                if allowed_layers and alt_node_layer not in allowed_layers:
-                    continue
-            
-            # Check capacity
-            alt_caps = node_caps[alt_nid]
-            if gpu > 0 and alt_caps.get("gpu_gb", 0.0) < gpu:
-                continue
-            
-            # Check period constraint - simulate placement on alternative node
-            alt_idx = self._node_index.get(alt_nid)
-            if alt_idx is not None and period < float('inf'):
-                # Create temporary placement with service on alternative node
-                temp_placement = dict(placement)
-                sid_str = str(getattr(svc, 'service_id', ''))
-                temp_placement[sid_str] = alt_nid
-                lat = self._latency_cost(svc, alt_idx, temp_placement)
-                if exec_time + lat > period:
-                    continue
-            
-            # Calculate utilization
-            alt_u = current_usage[alt_nid]
-            alt_cpu_util = (alt_u["cpu"] + cpu) / alt_caps["cpu"] if alt_caps["cpu"] > 0 else 1.0
-            alt_ram_util = (alt_u["ram"] + ram) / alt_caps["ram_gb"] if alt_caps["ram_gb"] > 0 else 1.0
-            alt_gpu_util = (alt_u["gpu"] + gpu) / alt_caps["gpu_gb"] if alt_caps.get("gpu_gb", 0) > 0 else (1.0 if (alt_u["gpu"] + gpu) > 0 else 0.0)
-            
-            if alt_cpu_util > 1.0 or alt_ram_util > 1.0 or alt_gpu_util > 1.0:
-                continue
-            
-            alt_max_util = max(alt_cpu_util, alt_ram_util, alt_gpu_util)
-            if alt_max_util < best_alt_util:
-                best_alt_nid = alt_nid
-                best_alt_util = alt_max_util
-        
-        return best_alt_nid
-
     # ---------- Optimize ----------
     def optimize(self, services: Optional[Sequence[Any]] = None,
                  current_assignment: Optional[Dict[str, str]] = None,
@@ -474,7 +272,7 @@ class GreedyWeightedOrchestrator(BaseOrchestrator):
         
         Delegates to base class which handles hysteresis logic.
         """
-        # Store current assignment for use in layer preservation
+        # Read by the placement search (seed placement and baseline load)
         self._current_assignment = current_assignment if current_assignment else {}
         return super().optimize(services, current_assignment, hysteresis_threshold)
 

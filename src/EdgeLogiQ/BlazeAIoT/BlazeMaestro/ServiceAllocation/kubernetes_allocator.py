@@ -16,8 +16,7 @@ Allocation flow (cross-cluster or no source):
 3. Scale source deployment to 0 (if provided)
 """
 
-from typing import Optional, Callable, Dict, Any, Tuple
-import json
+from typing import Optional, Tuple
 from contextlib import suppress
 from .base_allocator import BaseAllocator
 
@@ -131,7 +130,6 @@ class KubernetesAllocator(BaseAllocator):
         Returns:
             Tuple[bool, Optional[str]]: (success status, failure reason if failed)
         """
-        import sys
         
         deployment_name = deployment_name or service_id
         source_deployment_name = kwargs.get('source_deployment_name', deployment_name)
@@ -166,9 +164,6 @@ class KubernetesAllocator(BaseAllocator):
         )
 
         try:
-            if self.verbose:
-                mode = "same-cluster" if same_cluster else "cross-cluster"
-            
             if same_cluster:
                 # Same-cluster: scale up, add affinity, wait, scale down with new selector
                 return self._allocate_same_cluster(
@@ -290,7 +285,6 @@ class KubernetesAllocator(BaseAllocator):
         
         # Step 3: Wait for pod to be Ready on target_node
         try:
-            from kubernetes import client as k8s_client
             import time
             v1 = self._get_core_api(target_node=target_node)
             
@@ -353,7 +347,7 @@ class KubernetesAllocator(BaseAllocator):
                                 if has_ready_condition and containers_ready:
                                     pod_ready = True
                                     break
-                except Exception as e:
+                except Exception:
                     # Continue polling until timeout
                     pass
                 

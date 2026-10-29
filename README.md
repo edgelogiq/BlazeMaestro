@@ -1,103 +1,135 @@
-# Maestro
+# BlazeMaestro
+
+BlazeMaestro is the service-placement orchestrator of the BlazeAIoT platform. It places
+the containers of a robotic application (ROS 2 services) on an edge/fog/cloud continuum
+that includes a battery-powered mobile robot, and minimises energy and end-to-end latency
+under period (deadline) and capacity constraints.
+
+This repository contains the code used for the TPDS paper:
+
+- four orchestrators sharing the same feasibility model V(x) and hysteresis:
+  NSGA-II, Greedy weighted search with backtracking, DQN, and an autoencoder;
+- reference baselines (static initial placement, one-shot NSGA-II, Kubernetes default,
+  Kinitos-inspired, all-edge, all-fog);
+- a SimPy/SimGrid simulator of the platform, with network jitter and WiFi mobility;
+- the training, evaluation and revision-campaign scripts;
+- the deployment mode that drives a real Kubernetes cluster from Prometheus metrics.
+
+## Repository layout
+
+```
+src/
+  EdgeLogiQ/BlazeAIoT/BlazeMaestro/
+    Orchestrator/       NSGA-II, Greedy, DQN, autoencoder, shared utilities (V(x), hysteresis)
+    Simulator/          platform topology, nodes, services, network jitter, latency matrix
+    Topology/           platform, layer, node and service models; XML loaders
+    Metrics/            simulator and Prometheus metrics facades
+    ServiceAllocation/  simulator and Kubernetes allocators
+    Managers/, Executors/, ConfigUpdater/, Config/   deployment mode (Kubernetes + Prometheus)
+    Utils/              WiFi mobility model, CSV logging, logger mock
+  campaign/             revision campaign: scenarios, baselines, scalability, statistics
+  config/               platform and service definitions (XML), deployment configs (YAML/JSON)
+  train.py              trains the DQN and autoencoder orchestrators
+  compare_orchestrators.py, test.py, validate.py, visualize.py   simulation evaluation
+  blaze_maestro_main.py entry point of the deployment mode
+scripts/                paper figures, robot movement and WiFi degradation tools, Dockerfile
+out/                    trained checkpoints, results and figures used in the paper
+```
+
+## Installation
+
+Python 3.12 is used for the experiments.
+
+```bash
+python3 -m venv .venv
 source .venv/bin/activate
-export LD_LIBRARY_PATH=/home/cmelancon/dev/BlazeAIoT/maestro/simgrid-v4.1/build/lib:$LD_LIBRARY_PATH
-
-# Training with enhanced ML models (use matching platform and services XMLs)
-# Increased episodes to 500 per scenario for better convergence with stricter period constraints
-python src/train.py --enable-wifi --episodes-per-scenario 500 --scenarios all --export-dir out/train --enable-jitter --platform-xml src/config/platform_sim.xml --services-xml src/config/services_sim.xml
-
-python src/compare_orchestrators.py --checkpoint_dir out/train/final --hysteresis-threshold 0.0 --enable-wifi --enable-jitter --duration 30 --time-step 5 --seed 42 --output-dir out/train
-
-python src/test.py --checkpoint-dir out/train/final --hysteresis-threshold 0.0 --enable-wifi --enable-jitter --seed 42 --output-dir out/train
-
-python src/validate.py --results out/train/dynamic_results.json --output-dir out/train
-python src/visualize.py --results out/train/dynamic_results.json --output-dir out/train
-
-python3 ./src/blaze_maestro_main.py --layer_config_path src/config/layer_config.json --node_config_path src/config/node_config.json --service_config_path src/config/service_config_sim.json
-
-## Environment
-
-- Activate the venv
-```bash
-source .venv/bin/activate
+pip install -r src/requirements.txt
 ```
 
-- Ensure SimGrid’s native libs are visible (add both lib and lib64 just in case)
-```bash
-export LD_LIBRARY_PATH="$(pwd)/.venv/lib:$(pwd)/.venv/lib64:${LD_LIBRARY_PATH:-}"
-```
+`blazeaiot-core-nodemanager` is only needed by the deployment mode; the simulation
+scripts replace its logger with `Utils/blaze_logger_mock.py`.
 
-## Verify SimGrid loads (optional but recommended)
+The SimGrid Python bindings need CMake and Boost to build. They are only used at
+start-up by `train.py`, `compare_orchestrators.py` and `test.py`; latencies come from
+the platform XML links. On a machine without SimGrid, run training through
+`src/campaign/train_seed.py`, which takes the same arguments as `train.py`.
 
-```bash
-python - <<'PY'
-from simgrid import Engine
-e = Engine(["--cfg=plugin:energy"])  # should not raise
-print("SimGrid OK")
-PY
-```
+All commands below are run from the repository root with `PYTHONPATH=src`.
 
-## Run the Simulator main
+## Reproducing the results
+
+### Training
 
 ```bash
-PYTHONPATH=src python3 src/EdgeLogiQ/BlazeAIoT/BlazeMaestro/Simulator/main.py
+PYTHONPATH=src python src/train.py --enable-wifi --enable-jitter --episodes-per-scenario 500 \
+    --scenarios all --platform-xml src/config/platform_sim.xml \
+    --services-xml src/config/services_sim.xml --export-dir out/train
 ```
 
-## Train/Test the RL orchestrator
+Checkpoints are written to `out/train/final/`.
 
-- Quick smoke (prints service->node and node loads; no simulation)
+The simulation results of the paper use five models per learned orchestrator, retrained
+with seeds 1 to 5 (`src/campaign/train_seed.py`, one model per run):
+
 ```bash
-PYTHONPATH=src python3 src/train_test_rl_orchestrator.py \
-	--episodes 5 \
-	--episodes-per-scenario 3 \
-	--scenarios cpu50 \
-	--no-sim \
-	--log-every 1 \
-	--export-dir out/smoke
+PYTHONPATH=src python src/campaign/train_seed.py --models dqn --seed 1 --enable-wifi --enable-jitter \
+    --episodes-per-scenario 500 --scenarios all --platform-xml src/config/platform_sim.xml \
+    --services-xml src/config/services_sim.xml --export-dir out/campaign/train/seed1/dqn
 ```
 
-- Use real link latencies via SimGrid (if available) and print latency stats
+They are provided in `out/campaign/train/seed<N>/{dqn,autoencoder}/final/`;
+`out/campaign/train/seed<N>/final/` links both checkpoints of a seed into one folder.
+
+### Simulation evaluation
+
 ```bash
-PYTHONPATH=src python3 src/train_test_rl_orchestrator.py \
-	--scenarios cpu50 \
-	--no-sim \
-	--latency-mode simgrid \
-	--latency-debug \
-	--export-dir out/latency_check
+PYTHONPATH=src python src/compare_orchestrators.py --checkpoint_dir out/train/final \
+    --hysteresis-threshold 0.0 --enable-wifi --enable-jitter --duration 30 --time-step 5 \
+    --seed 42 --output-dir out/compare
+PYTHONPATH=src python src/visualize.py --results out/compare/dynamic_results.json --output-dir out/compare
+
+PYTHONPATH=src python src/test.py --checkpoint-dir out/train/final --hysteresis-threshold 0.0 \
+    --enable-wifi --enable-jitter --seed 42 --output-dir out/test
+PYTHONPATH=src python src/validate.py --results out/test/dynamic_results.json --output-dir out/test
 ```
 
-### Latency sources and fallback
+`compare_orchestrators.py` runs the dynamic ROS scenario and `visualize.py` plots it;
+`test.py` runs the reassignment scenarios and `validate.py` measures their stability.
 
-- The training script supports `--latency-mode`:
-	- `auto` (default): tries SimGrid; if it yields an all-zero matrix, falls back to parsing `platform.xml` and computing shortest paths from link latencies.
-	- `simgrid`: same as auto but warns if SimGrid is unavailable; still falls back to XML if SimGrid returns zeros.
-	- `zero`: force a zero-latency matrix (for control experiments).
+### Revision campaign
 
-- With `--latency-debug`, you will see a line like:
+`src/campaign/run_campaign.py` replays the 600 s dynamic scenario of the paper (60
+decisions, five workload phases, WiFi mobility and jitter) for all orchestrators and
+baselines. It is deterministic for a given seed.
 
-	`Latency stats (SimGrid): nonzeros=462/484, min=0.002000s, mean=0.018312s, max=0.042000s`
+```bash
+PYTHONPATH=src python src/campaign/run_campaign.py --seed 42 --hysteresis 0.0 \
+    --checkpoint-dir out/campaign/train/seed1/final --output out/campaign/seed42_h0.json
+PYTHONPATH=src python src/campaign/analyze.py out/campaign
+```
 
-	If SimGrid returns zeros, you’ll see:
+Other scenarios are selected with `--scenario disruption` or `--scenario robot_pressure`.
+The scalability study uses `gen_scalability.py` and `analyze_scal.py`, and the training
+variance study uses `train_seed.py` and `analyze_training_variance.py`.
 
-	`WARN: SimGrid returned zero-latency matrix; falling back to XML route-based latency.`
+### Figures
 
-	followed by stats labeled `(XML)` if that produced non-zero values.
+`scripts/generate_paper_figures.py` builds the simulation figures from the evaluation
+results. `scripts/generate_fig_dqn_energy.py` rebuilds the robot energy figure of the
+real deployment from `out/20260319_080017/`.
 
-## Troubleshooting
+## Deployment mode
 
-- simgrid import fails (e.g., `ImportError: libsimgrid.so...`)
-	- Ensure you’re in the venv and that native libs are visible:
-		```bash
-		source .venv/bin/activate
-		export LD_LIBRARY_PATH="$(pwd)/.venv/lib:$(pwd)/.venv/lib64:${LD_LIBRARY_PATH:-}"
-		python - <<'PY'
-		from simgrid import Engine
-		Engine(["--cfg=plugin:energy"])  # should succeed
-		print("SimGrid OK")
-		PY
-		```
+`src/blaze_maestro_main.py` runs the orchestration loop against Kubernetes clusters,
+reads node and service metrics from Prometheus, and applies placements through the
+Kubernetes API. Configuration files are in `src/config/` (see `src/config/README.md`).
 
-- Latency stats show all zeros
-	- Re-run in the same shell after setting `LD_LIBRARY_PATH` as above.
-	- Use `--latency-mode simgrid --latency-debug`; if SimGrid still yields zeros, the script automatically falls back to XML-derived latencies and prints a warning. Non-zero stats should then appear.
+```bash
+PYTHONPATH=src python src/blaze_maestro_main.py --layer_config_path src/config/layer_config.json \
+    --node_config_path src/config/node_config.json \
+    --service_config_path src/config/service_config_sim.json
+```
 
+## License
+
+MIT, see [LICENSE](LICENSE).

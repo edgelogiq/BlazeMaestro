@@ -5,12 +5,9 @@ Implements Single Responsibility Principle (SRP) for XML operations.
 Handles all XML file operations for services and platform configuration.
 """
 
-import os
-import shutil
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
-from typing import Dict, List, Optional, Any
-from datetime import datetime
+from typing import Dict, List
 from pathlib import Path
 
 from BlazeAIoT.Core.Utils import BlazeLogger
@@ -103,117 +100,6 @@ class XMLManager:
         else:
             tree = ET.ElementTree(root)
             tree.write(filepath, encoding='utf-8', xml_declaration=True)
-    
-    def extract_initial_allocation(self, xml_path: Path) -> Dict[str, str]:
-        """
-        Extract initial service allocation from XML placements.
-        
-        Args:
-            xml_path: Path to services XML file
-            
-        Returns:
-            Dict mapping service_id to node_id
-        """
-        allocation = {}
-        locked_services = set()
-        
-        try:
-            root = self.load_xml(xml_path)
-            
-            for svc in root.findall('.//service'):
-                sid = svc.get('id') or svc.get('service_id')
-                if not sid:
-                    continue
-                
-                placement = svc.find('placement')
-                if placement is not None:
-                    node = placement.get('node')
-                    ptype = placement.get('type')
-                    
-                    # Track locks for orchestration constraints
-                    if ptype in ('locked', 'node_lock', 'layer_lock'):
-                        locked_services.add(sid)
-                    
-                    if node:
-                        allocation[sid] = node
-                
-                # Also check <instances> section
-                if sid not in allocation:
-                    node = self._extract_node_from_instances(svc, placement)
-                    if node:
-                        allocation[sid] = node
-            
-            if allocation:
-                self._logger.debug(f"✓ Initial allocation from XML: {len(allocation)} services")
-            
-        except Exception as e:
-            self._logger.warning(f"Could not extract allocation from XML: {e}")
-        
-        return allocation
-    
-    def _extract_node_from_instances(
-        self,
-        svc_element: ET.Element,
-        placement: Optional[ET.Element]
-    ) -> Optional[str]:
-        """Extract node from instances section, preferring locked layer instances."""
-        instances = svc_element.find('instances')
-        if instances is None:
-            return None
-        
-        # Check if this is a multi-layer service with layer-rules
-        locked_layer_id = None
-        daemonset_layer_ids = set()
-        
-        if placement is not None:
-            layer_rules = placement.find('layer-rules')
-            if layer_rules is not None:
-                for layer_rule in layer_rules.findall('layer'):
-                    layer_id = layer_rule.get('id')
-                    rule_type = layer_rule.get('type', 'flexible')
-                    if rule_type == 'layer-lock' and layer_id:
-                        locked_layer_id = layer_id
-                    elif rule_type == 'daemonset' and layer_id:
-                        daemonset_layer_ids.add(layer_id)
-        
-        # Try to find an instance in the locked layer first
-        selected_container = None
-        if locked_layer_id:
-            for container in instances.findall('container[@node]'):
-                if container.get('layer') == locked_layer_id:
-                    selected_container = container
-                    break
-        
-        # Fallback: find first non-daemonset instance
-        if selected_container is None:
-            for container in instances.findall('container[@node]'):
-                container_layer = container.get('layer', '')
-                if container_layer not in daemonset_layer_ids:
-                    selected_container = container
-                    break
-        
-        # Last resort: use first instance with node attribute
-        if selected_container is None:
-            selected_container = instances.find('container[@node]')
-        
-        if selected_container is not None:
-            return selected_container.get('node')
-        
-        return None
-    
-    def create_update_copy(self, source_path: Path, dest_path: Path) -> None:
-        """
-        Create an update copy of XML file if it doesn't exist.
-        
-        Args:
-            source_path: Source XML file
-            dest_path: Destination path for update copy
-        """
-        if not dest_path.exists():
-            shutil.copy2(source_path, dest_path)
-            self._logger.info(f"Created {dest_path.name} from {source_path.name}")
-        else:
-            self._logger.debug(f"Using existing {dest_path.name}")
     
     def update_with_allocation(
         self,
@@ -322,25 +208,3 @@ class XMLManager:
         
         self._add_placement_from_pods(svc_el, pod_list)
     
-    def xml_exists_and_valid(self, filename: str) -> bool:
-        """
-        Check if XML file exists and is valid (non-empty with services).
-        
-        Args:
-            filename: Name of XML file
-            
-        Returns:
-            True if file exists and has services, False otherwise
-        """
-        try:
-            xml_path = self.base_path / filename
-            if not xml_path.exists():
-                return False
-            
-            root = self.load_xml(xml_path)
-            services = root.findall('.//service')
-            return len(services) > 0
-        
-        except Exception as e:
-            self._logger.debug(f"XML validation failed for {filename}: {e}")
-            return False

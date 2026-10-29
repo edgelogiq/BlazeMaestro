@@ -14,7 +14,6 @@ import sys
 from pathlib import Path
 import csv
 from collections import defaultdict
-from datetime import datetime
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))

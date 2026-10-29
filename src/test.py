@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """
-test_reassignment_scenarios.py
-
 Test script to validate reassignment stability analysis with scenarios
 that intentionally trigger reassignments to verify the analysis works correctly.
 """
@@ -15,11 +13,9 @@ import os
 import simpy
 import random
 import sys
-import math
 import json
 from tabulate import tabulate
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Simulator.platform_topology import PlatformTopology
-from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Simulator.service_simulator import Service, ContainerSpec
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Topology.service_loader import ServiceDefinitionLoader
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Orchestrator.dqn_orchestrator import DQNOrchestrator
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Orchestrator.nsga2_orchestrator import NSGA2Orchestrator
@@ -372,7 +368,7 @@ def main():
     
     print(f"\n📊 Results saved to: {output_file}")
     print(f"\nNow run the stability validator:")
-    print(f"  python src/validate_reassignment_stability.py --results {output_file} --output-dir {args.output_dir}")
+    print(f"  python src/validate.py --results {output_file} --output-dir {args.output_dir}")
     print()
 
 

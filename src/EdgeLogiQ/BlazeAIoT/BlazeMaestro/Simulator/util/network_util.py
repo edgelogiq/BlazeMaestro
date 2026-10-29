@@ -10,7 +10,6 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from typing import Dict, Tuple, Set, List, Any, Union
 
-from .. import simgrid_compat as sg
 from ..network_jitter import NetworkJitterModel
 from ..latency_matrix_with_jitter import LatencyMatrixWithJitter
 
@@ -96,49 +95,6 @@ def _dijkstra(graph: Dict[str, List[Tuple[str, float]]], src: str) -> Dict[str, 
 
 class NetworkUtil:
     """Namespace for network-related utilities (static methods)."""
-
-    @staticmethod
-    def build_latency_matrix(nodes: List[Any]) -> np.ndarray:
-        """Build latency matrix using SimGrid Host.route_to where available.
-
-        Falls back to 0 when a route cannot be queried. Caches pairwise results
-        across calls to reduce overhead and mitigate native segfault risks.
-        """
-        global _latency_cache, _latency_cache_stats_printed
-        n = len(nodes)
-        mat = np.zeros((n, n), dtype=float)
-        misses = 0
-        for i, nf in enumerate(nodes):
-            for j, nt in enumerate(nodes):
-                if i == j:
-                    continue
-                key = (getattr(nf, "node_id", str(i)), getattr(nt, "node_id", str(j)))
-                if key not in _latency_cache:
-                    try:
-                        route = sg.Host.by_name(key[0]).route_to(sg.Host.by_name(key[1]))
-                        if isinstance(route, tuple) and len(route) == 2:
-                            _latency_cache[key] = float(route[1])
-                        else:
-                            total = 0.0
-                            try:
-                                links = list(route) if route is not None else []
-                            except Exception:
-                                links = []
-                            for link in links:
-                                try:
-                                    total += float(link.latency())
-                                except Exception:
-                                    pass
-                            _latency_cache[key] = total
-                    except Exception:
-                        _latency_cache[key] = 0.0
-                    misses += 1
-                mat[i, j] = _latency_cache.get(key, 0.0)
-        if not _latency_cache_stats_printed:
-            nonzeros = sum(1 for v in _latency_cache.values() if v > 0.0)
-            print(f"[SIMGRID] Latency cache initialized: pairs={len(_latency_cache)}, nonzero={nonzeros}, new_misses={misses}")
-            _latency_cache_stats_printed = True
-        return mat
 
     @staticmethod
     def build_latency_from_platform_xml(platform_xml_path: str, nodes: List[Any]) -> np.ndarray:

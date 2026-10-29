@@ -151,7 +151,7 @@ class OrchestratorCSVLogger:
                     
                     writer.writerow(row)
                     
-        except Exception as e:
+        except Exception:
             # Silently fail - latency matrix export is optional
             pass
     

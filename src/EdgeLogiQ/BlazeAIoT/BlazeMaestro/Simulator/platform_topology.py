@@ -195,7 +195,7 @@ class PlatformTopology:
             # Build latency matrix from platform.xml
             try:
                 latency_matrix = NetworkUtil.build_latency_from_platform_xml(self.platform_xml_path, all_nodes)
-            except Exception as e:
+            except Exception:
                 # Fall back to None if XML parsing fails
                 latency_matrix = None
             

@@ -37,7 +37,6 @@ class PlatformXMLUpdater:
         try:
             # Parse existing XML
             tree = ET.parse(xml_path)
-            root = tree.getroot()
 
             # Create a copy for the update file
             import copy

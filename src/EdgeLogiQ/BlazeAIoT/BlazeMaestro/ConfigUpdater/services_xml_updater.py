@@ -2,10 +2,10 @@
 import os
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import Dict, Optional, Set, Tuple, cast, List
+from typing import Dict, Optional, Set, Tuple, cast
 
 from BlazeAIoT.Core.Utils import BlazeLogger
-from .Tools import MetricsApplier, ServiceMatcher, ServiceCreator, InstanceManager
+from .Tools import ServiceCreator, InstanceManager
 
 
 class ServicesXMLUpdater:

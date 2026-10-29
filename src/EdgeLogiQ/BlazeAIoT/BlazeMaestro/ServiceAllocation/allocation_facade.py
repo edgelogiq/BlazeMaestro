@@ -6,7 +6,7 @@ Provides a unified interface for service allocation across different environment
 """
 
 from BlazeAIoT.Core.Utils import BlazeLogger
-from typing import Optional, Union, Tuple
+from typing import Optional, Tuple
 from .base_allocator import BaseAllocator
 from .kubernetes_allocator import KubernetesAllocator
 from .simulator_allocator import SimulatorAllocator

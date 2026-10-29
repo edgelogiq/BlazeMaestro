@@ -28,9 +28,7 @@ import subprocess
 import time
 import signal
 import sys
-import math
 import logging
-from pathlib import Path
 from typing import Optional, Tuple
 
 
@@ -386,17 +384,6 @@ class WiFiDegradationEmulator:
 
         self.is_cleaned_up = True
         return returncode == 0
-
-    def get_status(self) -> str:
-        """Get current status summary."""
-        progress, latency, loss = self.get_progress()
-        return (
-            f"Interface: {self.interface}\n"
-            f"Progress: {progress*100:.1f}%\n"
-            f"Current Latency: {latency:.2f}ms\n"
-            f"Current Loss: {loss:.2f}%"
-        )
-
 
 def main():
     """Main entry point."""

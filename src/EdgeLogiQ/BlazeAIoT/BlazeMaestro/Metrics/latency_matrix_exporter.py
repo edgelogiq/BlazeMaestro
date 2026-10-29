@@ -310,7 +310,6 @@ class LatencyMatrixExporter:
                     data_row.append(f"{latency_ms[i][j]:.4f}")
 
         # Write or append to CSV
-        import os
         with open(output_path, "a", newline="") as f:
             writer = csv.writer(f)
 

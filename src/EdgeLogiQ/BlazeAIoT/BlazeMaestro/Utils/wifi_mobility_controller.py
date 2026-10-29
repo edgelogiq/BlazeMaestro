@@ -30,10 +30,6 @@ class WifiAccessPoint:
     s_max: float = -70.0   # Reference signal level at d_max (dBm)
     beta: float = 2.0      # Path-loss exponent
 
-    def is_in_range(self, robot_pos: Position) -> bool:
-        """Check if robot position is within coverage"""
-        return self.position.distance_to(robot_pos) <= self.coverage_radius
-    
     def get_signal_strength(self, robot_pos: Position) -> float:
         """
         Signal strength in dBm using the log-distance path-loss model
@@ -243,13 +239,6 @@ class WiFiMobilityController:
             "velocity": {"x": robot.velocity.x, "y": robot.velocity.y},
             "connected_ap": robot.connected_ap,
             "speed": math.sqrt(robot.velocity.x**2 + robot.velocity.y**2)
-        }
-    
-    def get_all_status(self) -> Dict[str, Dict]:
-        """Get status of all robots"""
-        return {
-            robot_id: self.get_robot_status(robot_id)
-            for robot_id in self.robots.keys()
         }
     
     def set_update_interval(self, interval: float) -> None:

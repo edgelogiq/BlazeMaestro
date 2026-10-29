@@ -5,7 +5,7 @@ Handles service discovery, loading from XML, and building service configuration.
 """
 
 from BlazeAIoT.Core.Utils import BlazeLogger
-from typing import Dict, List, Optional
+from typing import Dict, List
 import xml.etree.ElementTree as ET
 import os
 

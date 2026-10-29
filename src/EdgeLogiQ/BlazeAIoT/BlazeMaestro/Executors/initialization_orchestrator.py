@@ -6,7 +6,7 @@ Coordinates the startup sequence of all BlazeMaestro components.
 """
 
 import os
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
 from BlazeAIoT.Core.Utils import BlazeLogger
 
 
@@ -217,7 +217,6 @@ class InitializationOrchestrator:
         print("\n[4/5] Initializing metrics provider...")
         
         try:
-            from ..Metrics.prometheus_facade import PrometheusMetricsFacade
             from ..Metrics.simulator_facade import SimulatorMetricsFacade
             
             env_mode = self.config_loader.get_environment_mode()

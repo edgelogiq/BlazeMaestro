@@ -7,10 +7,9 @@ Tracks allocations and deallocations without external dependencies.
 No events are published. Status is tracked in-memory only.
 """
 
-from typing import Optional, Dict, Any, Callable, Tuple
+from typing import Optional, Dict, Tuple
 from .base_allocator import BaseAllocator
 
-from BlazeAIoT.Core.Utils import BlazeLogger
 
 
 class SimulatorAllocator(BaseAllocator):

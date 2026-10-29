@@ -5,7 +5,7 @@ Implements Single Responsibility Principle (SRP) by handling only configuration 
 """
 
 import yaml
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from pathlib import Path
 from BlazeAIoT.Core.Utils import BlazeLogger
 
@@ -92,18 +92,6 @@ class ConfigLoader:
         
         return clusters
     
-    def get_kubernetes_config(self) -> Dict[str, Any]:
-        """Get Kubernetes configuration section."""
-        # Try new location: environment.kubernetes
-        env_config = self.get_environment_config()
-        k8s_config = env_config.get('kubernetes', {})
-        
-        # Fallback to legacy location: top-level kubernetes
-        if not k8s_config:
-            k8s_config = self._config.get('kubernetes', {})
-        
-        return k8s_config
-    
     def get_metrics_config(self) -> Dict[str, Any]:
         """Get metrics configuration section."""
         return self._config.get('metrics', {})
@@ -116,14 +104,6 @@ class ConfigLoader:
             'kubernetes' or 'simulator'
         """
         return self.get_environment_config().get('mode', 'kubernetes')
-    
-    def is_simulator_mode(self) -> bool:
-        """Check if running in simulator mode."""
-        return self.get_environment_mode() == 'simulator'
-    
-    def is_kubernetes_mode(self) -> bool:
-        """Check if running in Kubernetes mode."""
-        return self.get_environment_mode() == 'kubernetes'
     
     def get(self, key: str, default: Any = None) -> Any:
         """

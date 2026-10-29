@@ -82,53 +82,6 @@ class ServiceManager:
             self.load_services()
         return self.services
 
-    def get_service_by_id(self, service_id: str) -> Service:
-        """
-        Get a specific service by ID.
-
-        Args:
-            service_id: Service identifier
-
-        Returns:
-            Service object or None if not found
-        """
-        if self.services is None:
-            self.load_services()
-
-        for service in self.services:
-            if service.service_id == service_id:
-                return service
-
-        return None
-
-    def get_services_by_type(self, service_type: str) -> List[Service]:
-        """
-        Get services filtered by type.
-
-        Args:
-            service_type: Type of service ('daemonset', 'layer_locked', 'node_locked', 'flexible')
-
-        Returns:
-            List of matching Service objects
-        """
-        if self.services is None:
-            self.load_services()
-
-        if service_type == 'daemonset':
-            return [s for s in self.services if s.is_daemonset_service()]
-        elif service_type == 'layer_locked':
-            return [s for s in self.services if s.is_locked_to_layer()]
-        elif service_type == 'node_locked':
-            return [s for s in self.services if s.is_locked_to_node()]
-        elif service_type == 'flexible':
-            return [s for s in self.services if not (
-                s.is_daemonset_service() or
-                s.is_locked_to_layer() or
-                s.is_locked_to_node()
-            )]
-        else:
-            return []
-
     def get_provider_name(self) -> str:
         """
         Get the name of the service provider.

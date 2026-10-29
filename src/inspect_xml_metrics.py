@@ -129,7 +129,7 @@ def inspect_metrics_xml(xml_path):
     else:
         print("3. ACTION: No instances have complete metrics yet")
         print(f"   Run training for a few iterations:")
-        print(f"   python src/train_test_rl_orchestrator.py --episodes 5\n")
+        print(f"   python src/train.py --episodes-per-scenario 5\n")
 
 def main():
     if len(sys.argv) < 2:

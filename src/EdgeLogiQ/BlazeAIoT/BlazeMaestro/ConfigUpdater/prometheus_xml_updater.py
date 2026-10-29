@@ -37,7 +37,7 @@ CRITICAL RULES:
 
 import os
 import xml.etree.ElementTree as ET
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from datetime import datetime
 
 from .base_xml_updater import BaseXMLUpdater
@@ -50,7 +50,6 @@ from .node_resolver import NodeResolver
 from .instance_deduplicator import InstanceDeduplicator
 from .Tools import (
     MetricsAggregator,
-    PrometheusQuerier,
     InstanceMetricsUpdater,
     InstanceSeeder,
     ConfigUpdateHelper,
@@ -302,14 +301,6 @@ class PrometheusXMLUpdater(BaseXMLUpdater):
         logger.debug(f"[XML_EXTRACT] Extracted {len(xml_pods)} pods from XML with layer info")
         return xml_pods
     
-    def _is_multicluster_configured(self) -> bool:
-        """Check if multi-cluster orchestration is properly configured."""
-        # Multi-cluster requires cluster_urls AND proper cluster contexts in MetricsAggregator
-        # For now, check if we have the metrics_facade with cluster configs
-        if self.metrics_facade and hasattr(self.metrics_facade, 'cluster_configs'):
-            return len(getattr(self.metrics_facade, 'cluster_configs', [])) > 1
-        return False
-    
     def _collect_xml_pods_by_layer(self, xml_pods: List[Dict], namespace: str) -> Dict[str, Dict]:
         """Collect metrics for XML pods grouped by layer, querying the correct Prometheus for each layer."""
         from BlazeAIoT.Core.Utils import BlazeLogger
@@ -371,74 +362,6 @@ class PrometheusXMLUpdater(BaseXMLUpdater):
         
         return all_metrics
     
-    def _collect_xml_pods_multicluster(self, xml_pods: List[Dict], namespace: str) -> Dict[str, Dict]:
-        """Collect metrics for XML pods from all configured clusters."""
-        from BlazeAIoT.Core.Utils import BlazeLogger
-        logger = BlazeLogger.get_instance()
-        
-        aggregated_metrics = {}
-        
-        # If no cluster_urls configured, use single collector
-        if not self.cluster_urls or len(self.cluster_urls) <= 1:
-            return self.service_collector.collect_from_xml_pods(xml_pods, namespace)
-        
-        # Query each cluster and aggregate results
-        logger.info(f"[MULTICLUSTER] Querying {len(self.cluster_urls)} clusters for XML pods")
-        for cluster_name, cluster_url in self.cluster_urls.items():
-            try:
-                # Create cluster-specific collector
-                cluster_query_client = PrometheusQueryClient(
-                    prometheus_url=cluster_url,
-                    verify_ssl=self.verify_ssl
-                )
-                cluster_collector = ServiceMetricsCollector(
-                    cluster_query_client,
-                    kube_context=self.service_collector.kube_context,
-                    kubeconfig_path=self.service_collector.kubeconfig_path,
-                    cluster_id=cluster_name
-                )
-                
-                # Collect from this cluster
-                logger.debug(f"[MULTICLUSTER] Querying {cluster_name} at {cluster_url}")
-                cluster_metrics = cluster_collector.collect_from_xml_pods(xml_pods, namespace)
-                
-                # Merge into aggregated results
-                for service_id, svc_data in cluster_metrics.items():
-                    if service_id not in aggregated_metrics:
-                        aggregated_metrics[service_id] = {
-                            'workload_type': svc_data.get('workload_type', 'Deployment'),
-                            'by_node': {},
-                            'app': svc_data.get('app'),
-                            'pods': []
-                        }
-                    
-                    # Merge pods (deduplicate by name)
-                    existing_pod_names = {p.get('name') for p in aggregated_metrics[service_id]['pods']}
-                    for pod in svc_data.get('pods', []):
-                        if pod.get('name') not in existing_pod_names:
-                            aggregated_metrics[service_id]['pods'].append(pod)
-                            existing_pod_names.add(pod.get('name'))
-                    
-                    # Merge by_node metrics
-                    for node_name, node_data in svc_data.get('by_node', {}).items():
-                        if node_name in aggregated_metrics[service_id]['by_node']:
-                            # Merge: prefer non-zero values
-                            target = aggregated_metrics[service_id]['by_node'][node_name]
-                            for key in ['cpu_usage', 'ram_usage_gb', 'exec_time', 'execution_rate_hz']:
-                                src_val = node_data.get(key, 0.0)
-                                if src_val > 0:
-                                    target[key] = max(target.get(key, 0.0), src_val)
-                        else:
-                            aggregated_metrics[service_id]['by_node'][node_name] = node_data.copy()
-                
-                logger.debug(f"[MULTICLUSTER] {cluster_name}: Found metrics for {len(cluster_metrics)} services")
-                
-            except Exception as e:
-                logger.warning(f"[MULTICLUSTER] Failed to query {cluster_name}: {e}")
-        
-        logger.info(f"[MULTICLUSTER] Aggregated metrics for {len(aggregated_metrics)} services across all clusters")
-        return aggregated_metrics
-
     def _update_instance_metrics_impl(self, read_path: str, write_path: str = None,
                                      namespace: str = 'default',
                                      tree: Optional[ET.ElementTree] = None,

@@ -30,7 +30,6 @@ from .Executors.allocation_executor import AllocationExecutor
 from .Executors.initialization_orchestrator import InitializationOrchestrator
 from .Managers.orchestration_loop import OrchestrationLoop
 from .Utils.orchestrator_csv_logger import OrchestratorCSVLogger
-from .Managers.orchestration_loop import OrchestrationLoop
 
 
 class BlazeMaestro:
@@ -219,7 +218,6 @@ class BlazeMaestro:
                 try:
                     services_update_path = str(self.xml_manager.get_services_update_path('services.xml'))
                 except Exception:
-                    import os
                     services_update_path = str(self.xml_manager.base_path / 'services_update.xml')
             # Attach for use by the orchestration loop on each iteration
             setattr(self.orchestration_loop, 'services_update_xml_path', services_update_path)
@@ -496,6 +494,3 @@ class BlazeMaestro:
         """Legacy method - delegates to ConfigLoader."""
         return ConfigLoader(config_path).config
     
-    def _get_services_xml_path(self) -> str:
-        """Legacy method - delegates to ServiceDiscoveryManager."""
-        return self.service_discovery_manager.get_services_xml_path()

@@ -37,14 +37,12 @@ class InstanceSeeder:
                 created = 0
                 instances = ET.SubElement(service, 'instances') if instances is None else instances
                 # Track existing instances by pod_name (primary) or node (fallback for newly seeded instances)
-                existing_pods = {c.get('pod_name') for c in instances.findall('container') if c.get('pod_name')}
                 existing_nodes = {c.get('node') for c in instances.findall('container')}
                 
                 for c in containers.findall('container'):
                     node = c.get('node')
                     if not node:
                         continue
-                    cid = c.get('id')
                     # Only skip if we have a pod_name that already exists
                     if node in existing_nodes:
                         continue
@@ -192,7 +190,6 @@ class InstanceSeeder:
             created = 0
             updated = 0
             preserved = 0
-            removed = len(containers_to_remove)
             
             for pod in pods:
                 pod_name = pod.get('name')
@@ -240,10 +237,9 @@ class InstanceSeeder:
             
     def _load_host_layer_mapping(self, root: ET.Element) -> Dict[str, str]:
         """Load host->layer mapping from platform XML."""
-        mapping = {}
-        # Try to find platform.xml in same directory
-        # (Would need xml_path to do this properly - for now return empty dict)
-        return mapping    
+        # Not implemented: the platform XML path is not available here.
+        return {}
+
     def _merge_historical_metrics(self, active_container, terminated_container, logger, service_name, node_name):
         """
         Merge historical min/max metrics from terminated pod into active pod.

@@ -10,7 +10,6 @@ import argparse
 import os
 import numpy as np
 import random
-import math
 import torch
 
 # Check and log CUDA availability
@@ -26,126 +25,12 @@ from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Simulator.util.network_util import Network
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Simulator.util.topology_util import TopologyUtil
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Topology.service_loader import ServiceDefinitionLoader
 from train_utils import TrainUtils, DynamicScenario
-from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Utils.wifi_scenario_manager import RobotTravelScenario, get_wifi_scenario_manager
+from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Utils.wifi_scenario_manager import RobotTravelScenario
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Utils.wifi_orchestration_adapter import WiFiOrchestrationAdapter
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Utils.wifi_mobility_controller import WiFiMobilityController
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Utils.wifi_training_scenario import WiFiDynamicScenario
 import simpy
-import json
 from tqdm import tqdm
-
-
-def run_training(OrchestratorClass, name, all_nodes, services, latency, episodes_per_scenario, out_dir, args, scenario_manager, reuse_orch=None):
-    episodes_to_run = episodes_per_scenario
-    
-    if reuse_orch is not None:
-        print(f"\nContinuing {name} training from previous scenario for {episodes_to_run} episodes...")
-        orch = reuse_orch
-        # Update orchestrator with new services and nodes
-        orch.services = services
-        orch.num_services = len(services)
-        orch.nodes = all_nodes
-        orch.num_nodes = len(all_nodes)
-        orch.latency_matrix = latency
-    else:
-        print(f"\nTraining {name} for {episodes_to_run} episodes...")
-        orch = OrchestratorClass(services, all_nodes, latency)
-    violation_counts = []
-    final_assignment = None
-
-    def _build_random_assignment() -> dict:
-        """Randomize current assignment within eligibility constraints."""
-        node_ids = []
-        node_to_layer = {}
-        node_labels = {}
-        for n in all_nodes:
-            nid = getattr(n, 'node_id', None) or getattr(n, 'id', None)
-            if not nid:
-                continue
-            node_ids.append(nid)
-            layer_id = getattr(n, 'layer_id', None) or getattr(n, 'layer', None)
-            node_to_layer[nid] = layer_id
-            labels = getattr(n, 'labels', None) or getattr(n, 'node_labels', None)
-            if isinstance(labels, dict):
-                node_labels[nid] = labels
-
-        assignment = {}
-        if not node_ids:
-            return assignment
-
-        for svc in services:
-            sid = str(getattr(svc, 'service_id', None) or getattr(svc, 'id', None))
-            if not sid:
-                continue
-            eligible = svc.get_eligible_nodes(
-                all_node_ids=node_ids,
-                node_to_layer_map=node_to_layer,
-                node_labels=node_labels if node_labels else None,
-                current_node_id=None
-            )
-            if eligible:
-                assignment[sid] = random.choice(eligible)
-
-        return assignment
-    
-    # Progress bar for training episodes
-    pbar = tqdm(range(episodes_to_run), desc=f"Training {name}", unit="episode", leave=True)
-    
-    for ep in pbar:
-        current_assignment = _build_random_assignment() if episodes_to_run == 1 else None
-        try:
-            assignment = orch.optimize(services, current_assignment=current_assignment)
-        except RuntimeError as exc:
-            violations = [str(exc)]
-            violation_counts.append(len(violations))
-            final_assignment = {}
-            pbar.set_postfix({"Violations": len(violations), "Avg": f"{sum(violation_counts)/len(violation_counts):.1f}"})
-            continue
-        
-        # Use TrainUtils.calculate_metrics for consistent violation checking with baseline loads
-        total_latency, total_energy, violations, battery_usage, node_usage = TrainUtils.calculate_metrics(
-            assignment, services, all_nodes, latency,
-            time_step_minutes=5,
-            scenario=scenario_manager,
-            step=ep
-        )
-        strict_violations = TrainUtils.strict_validate_placement(assignment, services, all_nodes, latency)
-        if strict_violations:
-            violations = strict_violations
-        if total_latency is None:
-            violations = [f"Assignment returned None or invalid"]
-        
-        violation_counts.append(len(violations))
-        final_assignment = assignment
-        # Update progress bar with current violation count
-        pbar.set_postfix({"Violations": len(violations), "Avg": f"{sum(violation_counts)/len(violation_counts):.1f}"})
-        
-        # Only show violations if very severe or at major milestones
-        if len(violations) > 10 or (ep % max(500, episodes_to_run//4) == 0 and ep > 0 and violations):
-            tqdm.write(f"[{name}][Episode {ep+1}/{episodes_to_run}] Violations: {len(violations)}")
-    # Close progress bar
-    pbar.close()
-    
-    # Print training summary
-    avg_violations = sum(violation_counts) / len(violation_counts) if violation_counts else 0
-    final_violations = violation_counts[-1] if violation_counts else 0
-    print(f"✓ Training Summary for {name}:")
-    print(f"  Episodes: {episodes_to_run}, Avg violations: {avg_violations:.1f}, Final violations: {final_violations}")
-    if final_assignment:
-        assigned_services = sum(1 for v in final_assignment.values() if v)
-        print(f"  Services assigned: {assigned_services}/{len(services)}")
-    
-    # Save assignment and checkpoint
-    with open(os.path.join(out_dir, f"assignments_{name}.json"), "w") as f:
-        json.dump({"service_to_node": assignment}, f, indent=2)
-    ckpt_path = os.path.join(out_dir, f"{name}_checkpoint.pt")
-    try:
-        orch.save_checkpoint(ckpt_path)
-        print(f"Checkpoint saved to {ckpt_path}")
-    except Exception as e:
-        print(f"[WARN] Could not save checkpoint: {e}")
-    print(f"Training complete for {name}. Artifacts in {out_dir}")
-    return orch
 
 
 def main():
@@ -338,11 +223,11 @@ def main():
         train_list.append(autoencoder_orch)
 
     # Define dynamic service scenarios for training
-    # CRITICAL: Include "peak_traffic" to match compare script's 1.5x rate multiplier at T=10-15min
+    # "peak_traffic" matches the 1.5x rate multiplier of the evaluation scenario (T=10-15 min)
     service_scenarios = [
         "normal",           # Baseline with ±5% variation
-        "peak_traffic",     # 1.5x rates (matches compare script!) - IMPORTANT for DQN
-        "peak_traffic",     # Doubled probability - this is where violations occur
+        "peak_traffic",     # 1.5x rates
+        "peak_traffic",     # Listed twice to double its sampling probability
         "stress_test",      # 2.0x rates - even more aggressive
         "increased_workload",  # 1.2x exec_time (matches compare script T=15-20min)
         "extreme_rate",     # Fixed high rates (18-30Hz)

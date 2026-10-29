@@ -29,7 +29,6 @@ class Node:
         self.schedulable = schedulable  # Whether workloads can be scheduled on this node
 
     def __str__(self):
-        gpu_level = self.gpu if self.gpu else 0
         gpu_capacity = self.gpu if self.gpu else 0
         mem_type = "shared" if getattr(self, "gpu_shared", False) else "dedicated"
         return (

@@ -75,17 +75,6 @@ class PlatformTopologyManager:
         self.layers, self.nodes = self.platform.build()
         return self.layers, self.nodes
 
-    def get_layers(self) -> List[Layer]:
-        """
-        Get all layers.
-
-        Returns:
-            List of Layer objects
-        """
-        if self.layers is None:
-            self.load_topology()
-        return self.layers
-
     def get_nodes(self) -> List[Node]:
         """
         Get all nodes across all layers.
@@ -96,23 +85,6 @@ class PlatformTopologyManager:
         if self.nodes is None:
             self.load_topology()
         return self.nodes
-
-    def get_node_to_layer_map(self) -> dict:
-        """
-        Create a mapping from node_id to layer_id.
-
-        Returns:
-            Dictionary mapping node_id -> layer_id
-        """
-        if self.layers is None:
-            self.load_topology()
-
-        node_to_layer = {}
-        for layer in self.layers:
-            for node_id in layer.get_node_ids():
-                node_to_layer[node_id] = layer.layer_id
-
-        return node_to_layer
 
     def get_platform_name(self) -> str:
         """

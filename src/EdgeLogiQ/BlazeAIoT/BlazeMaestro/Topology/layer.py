@@ -19,9 +19,5 @@ class Layer:
     def get_nodes(self):
         return self.nodes
 
-    def get_node_ids(self) -> list[str]:
-        """Return list of node IDs in this layer (useful for daemonset deployment)."""
-        return [node.node_id for node in self.nodes]
-
     def __str__(self):
         return f"Layer(id={self.layer_id}, nodes={len(self.nodes)})"

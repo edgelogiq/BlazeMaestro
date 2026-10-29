@@ -23,7 +23,7 @@ import math
 
 # Import WiFi components
 from .wifi_mobility_controller import WiFiMobilityController
-from .wifi_scenario_manager import WiFiScenario, RobotTravelScenario, WiFiScenarioManager
+from .wifi_scenario_manager import WiFiScenario, WiFiScenarioManager
 
 
 @dataclass
@@ -92,31 +92,6 @@ class WiFiQualityReactor:
         self.last_quality[robot_id] = current_snr_level
         return False
     
-    def get_recommended_migration_targets(self, 
-                                         robot_id: str, 
-                                         current_snr_level: int,
-                                         available_aps: Dict[str, str]) -> List[str]:
-        """Get recommended node candidates for service migration.
-        
-        Args:
-            robot_id: Robot identifier
-            current_snr_level: Current SNR level
-            available_aps: Dict mapping robot_id to AP id
-            
-        Returns:
-            List of node IDs in preference order
-        """
-        if current_snr_level == 2:  # Poor WiFi
-            # Migrate to edge nodes where APs are located
-            ap_id = available_aps.get(robot_id)
-            if ap_id == "edge-gpu1":
-                return ["edge-gpu1", "edge-gpu2"]
-            elif ap_id == "edge-gpu2":
-                return ["edge-gpu2", "edge-gpu1"]
-        
-        return []
-
-
 class WiFiStateProvider:
     """Provides WiFi state information to orchestrator.
     
@@ -181,24 +156,6 @@ class WiFiStateProvider:
         except Exception as e:
             self._logger.error(f"Failed to update WiFi state: {e}")
             return {}
-    
-    def get_worst_robot_quality(self) -> Tuple[Optional[str], Optional[int]]:
-        """Get robot with worst current WiFi quality.
-        
-        Returns:
-            (robot_id, snr_level) or (None, None) if no data
-        """
-        worst_robot = None
-        worst_level = -1
-        
-        for robot_id, metrics_list in self.metrics_history.items():
-            if metrics_list:
-                latest = metrics_list[-1]
-                if latest.snr_level > worst_level:
-                    worst_robot = robot_id
-                    worst_level = latest.snr_level
-        
-        return worst_robot, worst_level if worst_level >= 0 else None
     
     @staticmethod
     def _parse_bandwidth(bandwidth_str: str) -> float:

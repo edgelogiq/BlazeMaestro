@@ -20,7 +20,7 @@ class SimulatorMetricsFacade(BaseMetricsFacade):
 
     def get_node_capacity(self, node_id: str) -> Dict[str, float]:
         n = self._node(node_id)
-        # Support both base Node (cpu, ram attributes) and SimPyNode (cpu_container, ram_container)
+        # Support both base Node (cpu, ram attributes) and NodeSimulator (cpu_container, ram_container)
         cpu_container = getattr(n, "cpu_container", None)
         if cpu_container is not None:
             cpu = float(getattr(cpu_container, "capacity", 0.0))
@@ -36,7 +36,7 @@ class SimulatorMetricsFacade(BaseMetricsFacade):
 
     def get_node_available(self, node_id: str) -> Dict[str, float]:
         n = self._node(node_id)
-        # Support both base Node and SimPyNode
+        # Support both base Node and NodeSimulator
         cpu_container = getattr(n, "cpu_container", None)
         if cpu_container is not None:
             cpu_avail = float(getattr(cpu_container, "level", 0.0))
@@ -100,7 +100,7 @@ class SimulatorMetricsFacade(BaseMetricsFacade):
                             if is_valid and first_row_len is not None:
                                 # Safe to convert
                                 latency_matrix = np.array(self._cached_latency_matrix, dtype=float)
-            except Exception as e:
+            except Exception:
                 # Silently fall back to computed latency matrix on any error
                 pass
 
@@ -159,7 +159,6 @@ class SimulatorMetricsFacade(BaseMetricsFacade):
         For WiFi-connected robots, all paths go through the connected AP:
         robot -> AP -> destination
         """
-        import numpy as np
         
         try:
             # Get all WiFi link characteristics

@@ -44,34 +44,3 @@ class XMLServiceProvider(ServiceProvider):
         return f"XML File ({os.path.basename(self.xml_path)})"
 
 
-class ProgrammaticServiceProvider(ServiceProvider):
-    """
-    Service provider that returns a pre-defined list of services.
-
-    Useful for hardcoded scenarios or testing.
-    """
-
-    def __init__(self, services: List[Service], name: str = "Programmatic"):
-        """
-        Initialize with a list of services.
-
-        Args:
-            services: List of Service objects
-            name: Provider name
-        """
-        self.services = services
-        self.provider_name = name
-
-    def get_services(self) -> List[Service]:
-        """
-        Return the pre-defined list of services.
-
-        Returns:
-            List of Service objects
-        """
-        return self.services
-
-    def get_name(self) -> str:
-        """Get provider name."""
-        return self.provider_name
-

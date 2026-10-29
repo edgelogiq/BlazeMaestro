@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """
-validate_reassignment_stability.py
-
 Validates reassignment behavior to distinguish between:
 1. Healthy reassignments: Adapting to changing conditions (good)
 2. Thrashing: Constantly reassigning without clear benefit (bad)
@@ -18,7 +16,7 @@ import argparse
 import json
 import os
 import numpy as np
-from collections import defaultdict, Counter
+from collections import defaultdict
 from tabulate import tabulate
 
 

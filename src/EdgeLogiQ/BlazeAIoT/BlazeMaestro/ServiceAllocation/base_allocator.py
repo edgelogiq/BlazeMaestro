@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, Tuple
 from .allocation_event import AllocationEvent, AllocationEventType
 import time
-from typing import Callable, Optional
 
 
 class BaseAllocator(ABC):

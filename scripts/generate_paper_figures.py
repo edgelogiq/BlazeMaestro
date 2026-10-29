@@ -12,7 +12,6 @@ Output: doc/img/*.pdf files ready for LaTeX inclusion
 
 import json
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 from matplotlib.gridspec import GridSpec
 import numpy as np
 from pathlib import Path
@@ -229,7 +228,7 @@ class PaperFigureGenerator:
         # Subplot 1: Reassignments (stacked: reassignments vs flip-flops)
         bars1a = ax1.bar(x, reassignments, width, label='Reassignments', 
                         color='#1f77b4', alpha=0.8, edgecolor='black', linewidth=1.5)
-        bars1b = ax1.bar(x, flip_flops, width, bottom=reassignments, 
+        ax1.bar(x, flip_flops, width, bottom=reassignments, 
                         label='Flip-Flops (within reassignments)', 
                         color='#d62728', alpha=0.6, edgecolor='black', linewidth=1.5)
         

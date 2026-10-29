@@ -359,9 +359,8 @@ class DQNEnvironment:
             dep_latency_weight = 2000.0  # seconds -> strong penalty
             reward -= dep_latency_weight * dep_wait
         if period > 0 and period < float('inf'):
-            # CRITICAL CHANGE: Much stronger period violation penalties to prevent deployment failures
-            # Goal: Make the model actively avoid period violations, not just accept them with penalties
-            
+            # Strong period-violation penalties so the policy avoids violations
+            # instead of trading them against energy.
             if period_violation > 0:
                 # Severe exponential penalty for ANY period violation
                 violation_severity = period_violation / period
@@ -479,6 +478,3 @@ class DQNEnvironment:
 
         return max(dfs(sid) for sid in service_latencies.keys())
 
-    def get_assignment(self) -> List[int]:
-        """Get current assignment."""
-        return list(self.state["assign"])

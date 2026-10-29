@@ -142,7 +142,7 @@ class KubernetesServiceDiscovery:
         for pod in pods.items:
             labels = pod.metadata.labels or {}
 
-            # Temporary targeted logging for robot-localization troubleshooting
+            # Extra logging for robot-localization pods
             label_values = list(labels.values())
             is_robot_localization = any(v == 'robot-localization' for v in label_values)
 
@@ -466,7 +466,6 @@ class KubernetesServiceDiscovery:
                         print(f"        extracted_service_id={extracted_id}, deployment_service_id={service_id}")
                 
                 for pod in pods.items:
-                    is_robot_loc = 'robot-localization' in workload_name
                     
                     active = self._pod_is_active(pod)
                     

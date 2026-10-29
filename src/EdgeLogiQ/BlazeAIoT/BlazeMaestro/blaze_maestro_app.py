@@ -58,9 +58,6 @@ class BlazeMaestroApp(BlazeService):
 
         await self.service.start()
 
-    def manage_new_config(self):
-        BlazeLogger.get_instance().info("Config updated")
-
     def _delete_node_callback(self):
         BlazeLogger.get_instance().info("Node deleted")
 

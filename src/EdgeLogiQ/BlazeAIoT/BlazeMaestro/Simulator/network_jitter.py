@@ -117,16 +117,3 @@ class NetworkJitterModel:
             # Exponential growth beyond 80%
             return 1.3 + 3.5 * ((load - 0.8) / 0.2) ** 2
     
-    def update_link_load(self, link_id: str, load: float):
-        """
-        Update link load for congestion modeling.
-        
-        Args:
-            link_id: Link identifier
-            load: Current load as a fraction of capacity (0.0 to 1.0)
-        """
-        self.link_load[link_id] = max(0.0, min(1.0, load))
-    
-    def reset_link_load(self):
-        """Reset all link loads (e.g., at start of new orchestration cycle)."""
-        self.link_load.clear()

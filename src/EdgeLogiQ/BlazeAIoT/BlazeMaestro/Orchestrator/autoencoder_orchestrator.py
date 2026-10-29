@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence
 import random
 import os
 import numpy as np
@@ -12,7 +12,6 @@ from .autoencoder_helpers import (
     OrchestratorWeights,
     build_autoencoder_model,
     build_state_features,
-    generate_training_samples,
     lazy_torch,
     train_single_batch,
 )
@@ -133,9 +132,7 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
         # Rebuild model with saved dimensions
         self.latent_dim = checkpoint['latent_dim']
         
-        # CRITICAL: Use the input_dim from the checkpoint if available, otherwise infer
-        # This handles cases where the code has changed but we want to load an old model (or vice versa)
-        # Ideally, we should save input_dim in the checkpoint.
+        # Use input_dim from the checkpoint when present (older checkpoints lack it), else infer it.
         saved_input_dim = checkpoint.get('input_dim')
         
         if saved_input_dim is not None:
@@ -234,7 +231,7 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
         topo_svcs = self._topological_sort(svcs)
         svc_idx_map = {id(s): i for i, s in enumerate(svcs)}
         
-        # Initialize placement_map with current assignment for multi-layer layer preservation
+        # Seed with the current assignment so services outside svcs keep their node
         placement_map: Dict[str, str] = {}
         if hasattr(self, '_current_assignment') and self._current_assignment:
             placement_map = dict(self._current_assignment)
@@ -287,29 +284,6 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
 
         return placement
 
-    def _select_best_node_for_service(self, svc: Any, svc_idx: int, placement_probs: Any, 
-                                      node_usage: Dict[int, Dict[str, float]], 
-                                      placement_map: Dict[str, str]) -> int:
-        """Select best node for a service based on probabilities and feasibility.
-        
-        Returns:
-            Node index for service placement
-        """
-        probs = placement_probs[svc_idx].cpu().numpy()
-        
-        # Find feasible nodes
-        feasible_nodes = self._find_feasible_nodes(svc, node_usage, placement_map)
-        
-        # Deterministic selection: choose highest-probability feasible node
-        if feasible_nodes:
-            feasible_probs = probs[feasible_nodes]
-            best_local = int(np.argmax(feasible_probs))
-            return int(feasible_nodes[best_local])
-        
-        raise RuntimeError(
-            f"No feasible node available for service {getattr(svc, 'service_id', svc_idx)}"
-        )
-
     def _find_feasible_nodes(self, svc: Any, node_usage: Dict[int, Dict[str, float]], 
                             placement_map: Dict[str, str]) -> List[int]:
         """Find all feasible nodes for a service.
@@ -318,15 +292,6 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
             List of feasible node indices
         """
         feasible_nodes = []
-        
-        # Get current placement to preserve layer for multi-layer services
-        current_node_id = placement_map.get(str(getattr(svc, 'service_id', '')))
-        current_layer = None
-        if current_node_id:
-            for node in self.nodes:
-                if str(getattr(node, 'node_id', '')) == current_node_id:
-                    current_layer = getattr(node, 'layer_id', None)
-                    break
         
         from .orchestrator_utils import OrchestratorUtils
         period_utils = OrchestratorUtils(self.services, self.nodes, self.latency_matrix)
@@ -451,7 +416,7 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
         
         Delegates to base class which handles hysteresis logic.
         """
-        # Store current assignment for use in layer preservation
+        # Read by the placement search (seed placement and baseline load)
         self._current_assignment = current_assignment if current_assignment else {}
         return super().optimize(services, current_assignment, hysteresis_threshold)
 

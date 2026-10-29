@@ -131,8 +131,7 @@ class TrainUtils:
                 services[i].execution_rate_hz *= random.uniform(0.95, 1.05)
         
         elif scenario_name == "peak_traffic":
-            # CRITICAL: Matches compare script T=10-15min (1.5x rate multiplier)
-            # This is where DQN violations occur - train specifically on this pattern!
+            # Matches the evaluation scenario at T=10-15 min (1.5x rate multiplier)
             baseline_rates = [10.0, 10.0, 7.0, 10.0, 10.0, 10.0]  # imu, encoder, slam, loc, pursuit, stop
             for i in range(1, 7):
                 services[i].execution_rate_hz = baseline_rates[i-1] * 1.5 * random.uniform(0.95, 1.05)

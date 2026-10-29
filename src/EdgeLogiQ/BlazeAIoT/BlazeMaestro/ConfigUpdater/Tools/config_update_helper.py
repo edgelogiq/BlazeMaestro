@@ -1,9 +1,8 @@
 """Configuration update orchestration and utility helpers."""
 import os
 import xml.etree.ElementTree as ET
-from typing import Dict, Optional, Set
+from typing import Dict, Optional
 
-from BlazeAIoT.Core.Utils import BlazeLogger
 
 
 class ConfigUpdateHelper:

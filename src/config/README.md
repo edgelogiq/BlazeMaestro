@@ -53,21 +53,6 @@ Edit these XML files to customize your simulation:
 
 ### For Production
 In production Kubernetes environments, you typically:
-- Use KubernetesPlatform instead of XML for nodes
-- Use KubernetesServiceProvider for services
+- Use MultiKubernetesPlatform (`Topology/kubernetes_platform.py`) instead of XML for nodes
+- Discover services through the Kubernetes service discovery (`Executors/kubernetes_service_discovery.py`)
 - Or use these XML files as templates/overrides
-
-## Documentation
-
-- **Platform**: See [Simulator README](../doc/Simulator_README.md)
-- **Services**: See [XML Service Definition](../doc/XML_SERVICE_DEFINITION.md)
-- **Dependency Injection**: See [DEPENDENCY_INJECTION.md](../doc/DEPENDENCY_INJECTION.md)
-
-## Location
-
-Previously, these files were located in:
-- `platform.xml`: `EdgeLogiQ/BlazeAIoT/BlazeMaestro/Simulator/platform.xml`
-- `services.xml`: `EdgeLogiQ/BlazeAIoT/BlazeMaestro/Topology/services.xml`
-
-They have been moved to this centralized `config/` directory for better organization.
-

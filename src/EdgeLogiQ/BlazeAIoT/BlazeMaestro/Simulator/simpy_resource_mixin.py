@@ -25,8 +25,3 @@ class SimPyResourceMixin:
         yield self.env.timeout(duration)
         yield self.ram_container.put(amount)
 
-    def get_cpu_available(self):
-        return self.cpu_container.level
-
-    def get_ram_available(self):
-        return self.ram_container.level

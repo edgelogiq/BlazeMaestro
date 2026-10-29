@@ -137,35 +137,6 @@ class TestOrchestrator(BaseOrchestrator):
         
         return assignment
     
-    def _can_fit_service(self, service: Any, node: Any) -> bool:
-        """
-        Check if a service can fit on a node.
-        
-        Args:
-            service: Service object
-            node: Node object
-        
-        Returns:
-            True if service can fit on node
-        """
-        # Get service demands
-        cpu, ram, gpu, _, _ = self._service_demands(service)
-        
-        # Check node capacity
-        node_cpu_cap = getattr(getattr(node, 'cpu', None), 'capacity', float('inf'))
-        node_ram_cap = getattr(getattr(node, 'memory', None), 'capacity', float('inf'))
-        node_gpu_cap = getattr(getattr(node, 'gpu', None), 'capacity', 0.0)
-        
-        # Simple check: does service fit in node's capacity
-        if node_cpu_cap < float('inf') and cpu > node_cpu_cap:
-            return False
-        if node_ram_cap < float('inf') and ram > node_ram_cap:
-            return False
-        if gpu > 0 and node_gpu_cap < gpu:
-            return False
-        
-        return True
-    
     def run_single_episode_training(self, all_nodes: Sequence[Any], 
                                    services: Sequence[Any],
                                    latency: List[List[float]]) -> int:

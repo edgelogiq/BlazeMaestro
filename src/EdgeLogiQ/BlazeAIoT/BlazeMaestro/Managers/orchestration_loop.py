@@ -9,7 +9,6 @@ from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Orchestrator.orchestrator_utils import Orc
 from typing import Dict, List, Optional, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor, Future
 import time
-import signal
 import threading
 from datetime import datetime
 

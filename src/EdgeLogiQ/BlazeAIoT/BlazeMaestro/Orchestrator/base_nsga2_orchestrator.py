@@ -64,40 +64,6 @@ class BaseNSGA2Orchestrator(BaseOrchestrator):
         """
         return OrchestratorUtils.calculate_service_demands(svc, node_id)
 
-    def _enforce_locked_nodes(self, assignment: List[int]) -> List[int]:
-        """Enforce locked-node and locked-layer constraints for services.
-
-        Args:
-            assignment: Initial assignment (service_idx -> node_idx)
-
-        Returns:
-            Modified assignment with locked constraints enforced
-        """
-        result = list(assignment)
-        for s_idx, svc in enumerate(self.services):
-            # Check for node lock first (most restrictive)
-            locked_nid = getattr(svc, 'locked_node_id', None)
-            if locked_nid is not None:
-                # Find node index matching the locked node_id
-                node_idx = next((i for i, n in enumerate(self.nodes)
-                               if str(getattr(n, 'node_id', '')) == str(locked_nid)), None)
-                if node_idx is not None:
-                    result[s_idx] = node_idx
-            else:
-                # Check for layer lock
-                locked_layer = getattr(svc, 'locked_layer_id', None)
-                if locked_layer is not None:
-                    # If assigned node is not in locked layer, find a node in that layer
-                    assigned_node = self.nodes[result[s_idx]]
-                    assigned_layer = getattr(assigned_node, 'layer_id', None)
-                    if assigned_layer != locked_layer:
-                        # Find first node in the locked layer
-                        node_idx = next((i for i, n in enumerate(self.nodes)
-                                       if getattr(n, 'layer_id', None) == locked_layer), None)
-                        if node_idx is not None:
-                            result[s_idx] = node_idx
-        return result
-
     def _dependency_wait(self, s_idx: int, n_idx: int, assignment: List[int], hard_only: bool = False) -> float:
         """Calculate latency waiting time due to service dependencies.
 

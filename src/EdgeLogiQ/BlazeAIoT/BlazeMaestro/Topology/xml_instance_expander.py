@@ -23,21 +23,6 @@ def _ensure_instances_element(service_elem: ET.Element) -> ET.Element:
     return instances
 
 
-def _harvest_existing_metrics(instances: ET.Element) -> Dict[str, Dict[str, str]]:
-    """Capture existing metrics by pod_name or node+container id to preserve history."""
-    metrics_map: Dict[str, Dict[str, str]] = {}
-    for c in instances.findall('container'):
-        key = c.get('pod_name') or f"{c.get('node','')}::{c.get('id','')}"
-        metrics_map[key] = {
-            k: v for k, v in c.attrib.items()
-            if k in (
-                'cpu_usage_min', 'cpu_usage_max', 'cpu_usage_last',
-                'ram_usage_min_gb', 'ram_usage_max_gb', 'ram_usage_last_gb'
-            )
-        }
-    return metrics_map
-
-
 def _copy_container_template(template: ET.Element) -> ET.Element:
     # shallow copy of container element with its attributes, excluding static capacity specs
     attrib = {}
@@ -116,7 +101,6 @@ def expand_services_to_instances(
         container_templates = service.find('containers')
         if container_templates is not None:
             # Track pod names present now for this service
-            present_pod_names = set(pod_map.keys()) if pod_map else set()
             
             # Track which old containers have been matched to current targets
             matched_old_containers = set()

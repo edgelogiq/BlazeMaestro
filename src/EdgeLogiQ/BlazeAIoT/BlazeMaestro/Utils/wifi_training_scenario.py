@@ -15,10 +15,9 @@ Follows SOLID principles:
 - Dependency Injection: Receives scenario manager and WiFi adapter
 """
 
-from typing import List, Optional
+from typing import List
 import logging
 import random
-import numpy as np
 
 from train_utils import DynamicScenario
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Simulator.service_simulator import Service
@@ -97,12 +96,10 @@ class WiFiDynamicScenario(DynamicScenario):
         # Time-varying baseline (similar to compare_orchestrators.py pattern)
         if time_min < 2:
             # Normal operation
-            scenario_desc = "Normal operation"
             for svc in services:
                 svc.execution_rate_hz *= random.uniform(0.95, 1.05)
         elif time_min < 4:
             # Peak traffic
-            scenario_desc = "Peak traffic (1.5x execution rates)"
             for svc in services:
                 if not hasattr(svc, '_baseline_rate'):
                     setattr(svc, '_baseline_rate', svc.execution_rate_hz)
@@ -110,7 +107,6 @@ class WiFiDynamicScenario(DynamicScenario):
                 svc.execution_rate_hz = baseline * 1.5 * random.uniform(0.95, 1.05)
         elif time_min < 6:
             # Increased workload
-            scenario_desc = "Increased workload (1.2x execution times)"
             for svc in services:
                 for container in svc.containers:
                     if not hasattr(container, '_baseline_exec_time'):
@@ -119,7 +115,6 @@ class WiFiDynamicScenario(DynamicScenario):
                     container.exec_time = baseline_time * 1.2 * random.uniform(0.95, 1.05)
         else:
             # Low traffic period
-            scenario_desc = "Low traffic period"
             for svc in services:
                 svc.execution_rate_hz = getattr(svc, '_baseline_rate', svc.execution_rate_hz) * 0.7
     
@@ -239,17 +234,3 @@ class WiFiDynamicScenario(DynamicScenario):
         
         self._logger.info(f"[Step {step}] {self.get_time_label()} - {scenario_desc} | {metrics_str}")
     
-    def get_summary(self) -> dict:
-        """Get scenario execution summary.
-        
-        Returns:
-            Dictionary with scenario statistics
-        """
-        return {
-            "duration_minutes": self.duration_minutes,
-            "steps_completed": self.current_step,
-            "num_steps": self.num_steps,
-            "rebalances_triggered": self.num_rebalances_triggered,
-            "scenario_name": self.wifi_adapter.scenario_manager.get_current_scenario().name 
-                           if self.wifi_adapter else "Unknown"
-        }

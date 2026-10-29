@@ -24,7 +24,6 @@ class PrometheusQueryClient:
             prometheus_url: Direct Prometheus URL (legacy fallback)
             verify_ssl: Whether to verify SSL certificates
         """
-        from BlazeAIoT.Core.Utils import BlazeLogger
         
         self.metrics_facade = metrics_facade
         self.verify_ssl = verify_ssl
@@ -146,10 +145,8 @@ class PrometheusQueryClient:
             # Port 9091 = fog, 9090 = edge
             if port == 9091:
                 kubeconfig = "~/.kube/config.lab.fog"
-                context = "lab-fog"
             else:
                 kubeconfig = "~/.kube/config.lab.edge"
-                context = "lab-edge"
             
             # Start new port-forward
             pf_cmd = f"KUBECONFIG={kubeconfig} kubectl port-forward -n cattle-monitoring-system svc/rancher-monitoring-prometheus {port}:9090 > /tmp/pf_{port}.log 2>&1 &"
@@ -263,7 +260,7 @@ class PrometheusQueryClient:
 
                 BlazeLogger.get_instance().warning(f"Prometheus query failed: {query}")
                 return None
-            except Exception as e:
+            except Exception:
                 #BlazeLogger.get_instance().error(f"Failed to query Prometheus: {e}")
                 return None
         

@@ -25,7 +25,6 @@ class NodeMetricsCollector:
         Returns:
             Dictionary mapping node names to their metrics (cpu_cores, ram_gb, gpu_count, layer, cpu_freq_hz)
         """
-        from BlazeAIoT.Core.Utils import BlazeLogger
         
         metrics = {}
 

@@ -4,7 +4,6 @@ BlazeAIoT Maestro - Main Entry Point
 """
 
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.blaze_maestro_app import BlazeMaestroApp
-from BlazeAIoT.Core.Utils import BlazeLogger
 
 import sys
 import os
@@ -12,7 +11,6 @@ import argparse
 import signal
 import time
 
-from typing import Dict
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))

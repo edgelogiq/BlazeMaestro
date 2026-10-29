@@ -184,24 +184,6 @@ class AsyncMetricsFetcher:
         with self._lock:
             return self._metrics_snapshot.get('facade')
     
-    def is_fresh(self, max_age_seconds: float = 5.0) -> bool:
-        """
-        Check if metrics snapshot is fresh.
-        
-        Args:
-            max_age_seconds: Maximum acceptable age of snapshot
-            
-        Returns:
-            True if snapshot exists and is fresher than max_age_seconds
-        """
-        snapshot = self.get_snapshot()
-        
-        if snapshot['timestamp'] is None:
-            return False
-        
-        age = time.time() - snapshot['timestamp']
-        return age <= max_age_seconds
-    
     def get_health(self) -> Dict[str, Any]:
         """
         Get fetcher health status.

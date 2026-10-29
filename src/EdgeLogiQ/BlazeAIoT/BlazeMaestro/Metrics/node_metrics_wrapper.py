@@ -1,5 +1,4 @@
 from typing import Dict, Optional, Any, TYPE_CHECKING
-from BlazeAIoT.Core.Utils import BlazeLogger
 
 if TYPE_CHECKING:
     from ..Metrics.base import BaseMetricsFacade
@@ -21,7 +20,7 @@ class NodeMetricsWrapper:
         if self._facade:
             return self._facade.get_node_capacity(self._node.node_id)
         # Fallback to direct access if no facade is set
-        # Support both base Node and SimPyNode
+        # Support both base Node and NodeSimulator
         cpu_container = getattr(self._node, "cpu_container", None)
         if cpu_container is not None:
             cpu = float(getattr(cpu_container, "capacity", 0.0))

@@ -1,6 +1,6 @@
 """Handles instance metric updates from Prometheus."""
 import xml.etree.ElementTree as ET
-from typing import Dict, Tuple
+from typing import Dict
 
 from BlazeAIoT.Core.Utils import BlazeLogger
 
@@ -98,7 +98,7 @@ class InstanceMetricsUpdater:
                         container.set('exec_time', new_exec)
                         logger.debug(f"[PROM_EXEC] {service_id}/{pod_name}@{node_name}: exec_time={new_exec}")
                         changed = True
-            except (TypeError, ValueError) as e:
+            except (TypeError, ValueError):
                 logger.warning(f"[PROM_EXEC] Invalid exec_time value for {service_id}/{pod_name}: {exec_time_val}")
         
         # Apply execution_rate_hz
@@ -116,61 +116,8 @@ class InstanceMetricsUpdater:
                         container.set('execution_rate_hz', new_rate)
                         logger.debug(f"[PROM_EXEC] {service_id}/{pod_name}@{node_name}: execution_rate_hz={new_rate}")
                         changed = True
-            except (TypeError, ValueError) as e:
+            except (TypeError, ValueError):
                 logger.warning(f"[PROM_EXEC] Invalid execution_rate_hz value for {service_id}/{pod_name}: {exec_rate_val}")
         
         return changed
     
-    def apply_metrics_to_instances(self, root: ET.Element, service_metrics: Dict, pod_node_metrics: Dict,
-                                   per_layer_cpu: Dict, per_layer_ram: Dict,
-                                   node_cpu_fallback: Dict, node_ram_fallback: Dict) -> int:
-        """Apply metrics to all instances. Returns updated count."""
-        logger = BlazeLogger.get_instance()
-        updated_count = 0
-        
-        for service in root.findall('service'):
-            service_id = service.get('id')
-            instances = service.find('instances')
-            if instances is None or len(instances) == 0:
-                continue
-            
-            for container in list(instances.findall('container')):
-                node_raw = container.get('node')
-                node = self.base_updater._normalize_node_id(node_raw) if node_raw else None
-                layer = container.get('layer', 'default')
-                lookup_layer = 'edge' if layer == 'frank' else layer
-                
-                if not node:
-                    continue
-                
-                # Look up metrics
-                pod_name = container.get('pod_name')
-                cpu_current = per_layer_cpu.get((lookup_layer, pod_name)) if pod_name else None
-                ram_current = per_layer_ram.get((lookup_layer, pod_name)) if pod_name else None
-                
-                # Fallback to node-based lookup
-                if cpu_current is None:
-                    cpu_current = per_layer_cpu.get((lookup_layer, node)) or node_cpu_fallback.get((lookup_layer, node))
-                if ram_current is None:
-                    ram_current = per_layer_ram.get((lookup_layer, node)) or node_ram_fallback.get((lookup_layer, node))
-                
-                if cpu_current is None and ram_current is None:
-                    continue
-                
-                # Update CPU
-                if cpu_current is not None:
-                    if self.update_cpu_metric(container, float(cpu_current), service_id, pod_name):
-                        updated_count += 1
-                
-                # Update RAM
-                if ram_current is not None:
-                    if self.update_ram_metric(container, float(ram_current), service_id, pod_name):
-                        updated_count += 1
-                
-                # Update exec metrics
-                metrics_entry = pod_node_metrics.get((pod_name, node)) if pod_name and node else None
-                if metrics_entry:
-                    if self.update_exec_metrics(container, metrics_entry, service_id, pod_name, node):
-                        updated_count += 1
-        
-        return updated_count

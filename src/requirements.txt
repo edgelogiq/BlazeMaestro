@@ -1,12 +1,15 @@
 numpy>=1.26,<3
 simpy>=4.1,<5
-gymnasium==0.29.1
 simgrid>=4.0.0
 requests>=2.31,<3
 torch>=2.2,<3; platform_system!="Darwin" or platform_machine!="arm64"
 tqdm>=4.60,<5
 kubernetes>=28.0.0,<30
 pyyaml>=6.0,<7
+matplotlib>=3.7
+pandas>=2.0
+scipy>=1.10
+tabulate>=0.9
 prometheus-client==0.21.1
 
 blazeaiot-core-nodemanager==0.7.13.dev20260113191754

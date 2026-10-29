@@ -1,6 +1,5 @@
 """Manages service instances and pod lifecycle."""
 import xml.etree.ElementTree as ET
-from typing import Dict
 
 from BlazeAIoT.Core.Utils import BlazeLogger
 from .metrics_applier import MetricsApplier
@@ -42,11 +41,6 @@ class InstanceManager:
                 changed = True
         
         # Update instances
-        workload_type = metrics.get('workload_type', '')
-        placement = service.find('placement')
-        if placement and placement.get('type') == 'daemonset':
-            workload_type = 'DaemonSet'
-        
         pods = metrics.get('pods', []) or []
         by_node = metrics.get('by_node', {}) or {}
         
@@ -95,7 +89,6 @@ class InstanceManager:
             changed = True
         
         # Enforce one instance per node
-        current_by_node = {p.get('name'): p.get('node') for p in pods if p.get('name') and p.get('node')}
         
         # Remove duplicates on same node
         for node, insts in self._group_by_node(instances):

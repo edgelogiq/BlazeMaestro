@@ -67,7 +67,6 @@ class SimulatorXMLUpdater(BaseXMLUpdater):
         Returns:
             True if successful, False otherwise
         """
-        from BlazeAIoT.Core.Utils import BlazeLogger
         
         # Support both old and new API
         if metrics_provider is not None:

@@ -502,7 +502,6 @@ class ServiceMetricsCollector:
 
     def _merge_daemonset_variants(self, metrics: Dict[str, Dict]) -> Dict[str, Dict]:
         """Merge daemonset variants (cpu/gpu/jetson) under common base."""
-        from BlazeAIoT.Core.Utils import BlazeLogger
         
         merged = {}
         merge_count = 0
@@ -548,7 +547,6 @@ class ServiceMetricsCollector:
 
     def _merge_multi_deployment_variants(self, metrics: Dict[str, Dict]) -> Dict[str, Dict]:
         """Merge multi-deployment variants (eth0, wifi, etc.) under base service."""
-        from BlazeAIoT.Core.Utils import BlazeLogger
         
         common_suffixes = {'eth0', 'eth1', 'wifi', 'main', 'gpu', 'cpu', 'primary', 'secondary'}
         merged = {}

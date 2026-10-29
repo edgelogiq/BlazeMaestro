@@ -8,7 +8,6 @@ import atexit
 import time
 import os
 import shutil
-from pathlib import Path
 from typing import Dict, Optional, Any, List
 
 import requests
@@ -764,7 +763,7 @@ class PrometheusMetricsFacade(BaseMetricsFacade):
             result = data.get("data", {}).get("result", [])
             return result
 
-        except requests.exceptions.Timeout as e:
+        except requests.exceptions.Timeout:
             BlazeLogger.get_instance().debug(f"Prometheus query timeout (2s): {promql[:100]}")
             return []
         except requests.exceptions.RequestException as e:

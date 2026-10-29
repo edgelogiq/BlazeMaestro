@@ -9,7 +9,7 @@ Caches the mapping to avoid rebuilding multiple times per update cycle.
 """
 
 import xml.etree.ElementTree as ET
-from typing import Dict, Optional
+from typing import Dict
 from BlazeAIoT.Core.Utils import BlazeLogger
 
 
@@ -30,10 +30,6 @@ class NodeResolver:
         self.verify_ssl = verify_ssl
         self._cache = None
         self.logger = BlazeLogger.get_instance()
-    
-    def clear_cache(self):
-        """Clear the cached IP-to-name mapping."""
-        self._cache = None
     
     def get_mapping(self, root: ET.Element = None) -> Dict[str, str]:
         """
@@ -156,27 +152,6 @@ class NodeResolver:
             self.logger.warning("[NodeResolver] kubernetes library not available")
         except Exception as e:
             self.logger.warning(f"[NodeResolver] K8s API unavailable: {e}")
-    
-    def resolve_node(self, node_identifier: str, root: ET.Element = None) -> str:
-        """
-        Resolve a single node identifier (IP or name) to its canonical name.
-        
-        Args:
-            node_identifier: Node IP address or name
-            root: XML root (used to build mapping if not cached)
-            
-        Returns:
-            Resolved node name, or original identifier if not found
-        """
-        if not node_identifier:
-            return node_identifier
-        
-        mapping = self.get_mapping(root)
-        
-        # Try exact match, then case-insensitive
-        resolved = mapping.get(node_identifier) or mapping.get(node_identifier.lower())
-        
-        return resolved if resolved else node_identifier
     
     def resolve_all_in_xml(self, root: ET.Element) -> int:
         """

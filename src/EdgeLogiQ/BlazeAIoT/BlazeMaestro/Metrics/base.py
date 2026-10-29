@@ -1,5 +1,4 @@
 from __future__ import annotations
-from BlazeAIoT.Core.Utils import BlazeLogger
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional

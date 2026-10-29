@@ -212,11 +212,8 @@ class OrchestrationContext:
         logger = BlazeLogger.get_instance()
 
         # Build indices for dependency lookups
-        service_by_id = {str(getattr(svc, 'service_id', '')): svc for svc in self.services}
         node_by_id = {str(getattr(n, 'node_id', '')): n for n in self.nodes}
-        node_index_map = {str(getattr(n, 'node_id', '')): i for i, n in enumerate(self.nodes)}
         latency_matrix = self.get_latency_matrix()
-        has_latency_matrix = latency_matrix is not None and len(latency_matrix) > 0
 
         period_utils = OrchestratorUtils(self.services, self.nodes, latency_matrix)
         for svc in self.services:

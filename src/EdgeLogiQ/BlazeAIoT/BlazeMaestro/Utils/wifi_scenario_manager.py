@@ -20,7 +20,6 @@ Follows SOLID principles:
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
-import math
 import logging
 
 
@@ -75,18 +74,6 @@ class WiFiScenario(ABC):
         """
         pass
     
-    def should_react_to_wifi_quality(self, current_time: float) -> bool:
-        """Determine if orchestrator should react to WiFi quality changes.
-        
-        Args:
-            current_time: Current simulation time in seconds
-            
-        Returns:
-            True if orchestrator should make decisions based on WiFi
-        """
-        return True
-
-
 class RobotTravelScenario(WiFiScenario):
     """Realistic scenario: Robot travels between two WiFi access points.
     
@@ -245,26 +232,6 @@ class WiFiScenarioManager:
         """Initialize scenario manager."""
         self._logger = logging.getLogger("WiFiScenarioManager")
         self._current_scenario: Optional[WiFiScenario] = None
-    
-    @classmethod
-    def register_scenario(cls, name: str, scenario_class: type) -> None:
-        """Register a new scenario type.
-        
-        Args:
-            name: Scenario identifier
-            scenario_class: Class implementing WiFiScenario
-        """
-        cls._scenarios[name] = scenario_class
-        logging.getLogger("WiFiScenarioManager").info(f"Registered scenario: {name}")
-    
-    @classmethod
-    def get_available_scenarios(cls) -> List[str]:
-        """Get list of available scenario names.
-        
-        Returns:
-            List of scenario identifiers
-        """
-        return list(cls._scenarios.keys())
     
     def create_scenario(self, scenario_name: str, **kwargs) -> Optional[WiFiScenario]:
         """Create a scenario instance.

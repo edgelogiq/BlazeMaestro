@@ -6,10 +6,8 @@ This demonstrates how to load and analyze the CSV outputs from compare_orchestra
 """
 
 import pandas as pd
-import os
 import sys
 from pathlib import Path
-from datetime import datetime
 
 
 def find_latest_csv_session(base_dir="out"):

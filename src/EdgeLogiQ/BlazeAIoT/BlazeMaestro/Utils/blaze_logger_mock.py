@@ -5,7 +5,7 @@ This module provides a mock BlazeLogger that prevents the circular import
 issue when running training scripts without the full BlazeAIoT stack.
 
 Simply import this before importing the problematic modules:
-    from blaze_logger_workaround import install_logger_workaround
+    from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Utils.blaze_logger_mock import install_logger_workaround
     install_logger_workaround()
     
 Then proceed with normal imports.

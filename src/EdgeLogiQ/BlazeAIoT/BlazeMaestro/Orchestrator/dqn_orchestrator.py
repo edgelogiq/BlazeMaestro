@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 import copy
-import random
 import os
-from typing import Any, List, Sequence, Tuple, Optional, Callable, Dict
+from typing import Any, List, Sequence, Optional, Callable, Dict
 
-import numpy as np
 import torch
 
 from ..Metrics.base import BaseMetricsFacade
 from ..Metrics.simulator_facade import SimulatorMetricsFacade
 from .orchestrator_utils import OrchestratorUtils
-from .dqn_agent import DQNAgent
 from .dqn_environment import DQNEnvironment
 from .base_orchestrator import BaseOrchestrator
 
@@ -104,9 +101,6 @@ class DQNOrchestrator(BaseOrchestrator):
             return torch, nn, optim, device
         except Exception as e:
             raise ImportError("PyTorch is required for DQNOrchestrator. Install torch or use another orchestrator.") from e
-
-    def set_debug(self, debug: bool):
-        self.debug = debug
 
     def _get_latency_matrix(self) -> List[List[float]]:
         """Get fresh latency matrix from metrics provider."""
@@ -297,7 +291,7 @@ class DQNOrchestrator(BaseOrchestrator):
                     dependency_wait_func=self._dependency_wait,
                     nodes=self.nodes,
                     allow_violations=relaxed_step,
-                    allow_period_violations=False,  # CRITICAL: Never allow period violations
+                    allow_period_violations=False,
                 )
 
                 if relaxed_step:
@@ -442,7 +436,6 @@ class DQNOrchestrator(BaseOrchestrator):
         if not valid:
             return {}
 
-        from .orchestrator_utils import OrchestratorUtils
         strict_violations = OrchestratorUtils(self.services, self.nodes, self._get_latency_matrix()).validate_placement(placement)
         if strict_violations:
             raise RuntimeError(f"DQN placement violates constraints: {strict_violations[0]}")
@@ -495,13 +488,6 @@ class DQNOrchestrator(BaseOrchestrator):
         # Delegate to base class for hysteresis handling
         return super().optimize(services, current_assignment, hysteresis_threshold)
 
-    # --- Metrics helpers ---
-    def set_episode_logger(self, logger: Optional[Callable[[int, float], None]]):
-        self._episode_logger = logger
-
-    def get_last_training_rewards(self) -> List[float]:
-        return list(self._last_rewards)
-    
     # --- Checkpoint save/load ---
     def save_checkpoint(self, path: str):
         """Save the trained DQN model to a checkpoint file."""
@@ -575,7 +561,6 @@ class DQNOrchestrator(BaseOrchestrator):
             return (loss if loss is not None else 0.0), 1
 
         # Validate assignment: all node IDs must exist
-        valid_nodes = {str(getattr(n, 'node_id', n)) for n in all_nodes}
         dqn_violations = []
         for svc in services:
             if svc.service_id in dqn_assignment:

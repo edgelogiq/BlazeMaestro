@@ -52,11 +52,6 @@ class SimgridUtil:
             return None
 
     @staticmethod
-    def _get_simgrid_engine(platform_xml_path: str):
-        """Compatibility alias for older code paths."""
-        return SimgridUtil.get_engine(platform_xml_path)
-
-    @staticmethod
     def cleanup_engine():
         """Explicitly clean up the shared SimGrid engine."""
         if SimgridUtil._shared_engine is not None:
