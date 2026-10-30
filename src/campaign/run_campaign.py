@@ -15,6 +15,7 @@ from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Utils.blaze_logger_mock import install_log
 install_logger_workaround()
 
 import argparse
+import zlib
 import contextlib
 import copy
 import io
@@ -114,6 +115,13 @@ ALL_POLICIES = ["NSGA-II", "DQN", "GreedyWeighted", "Autoencoder",
                 "Static-initial", "OneShot-NSGA-II", "K8s-default", "Kinitos-inspired", "All-edge", "All-fog"]
 
 
+def sub_seed(*parts) -> int:
+    """Deterministic seed derived from (run seed, step, label): independent of which
+    other policies share the run, so a given seed yields the same scenario and the same
+    stochastic draws for a policy in every campaign."""
+    return zlib.crc32("|".join(str(p) for p in parts).encode()) & 0x7FFFFFFF
+
+
 def seed_everything(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
@@ -124,7 +132,7 @@ def seed_everything(seed: int) -> None:
         pass
 
 
-def apply_phase(services, phase: str, congestion_factor: float, base_latency, latency_ref):
+def apply_phase(services, phase: str, congestion_factor: float, base_latency, latency_ref, rng=random):
     """Mutate services in place for the given phase; returns the latency matrix to use."""
     for svc in services:
         svc.execution_rate_hz = svc._baseline_rate
@@ -136,15 +144,15 @@ def apply_phase(services, phase: str, congestion_factor: float, base_latency, la
                 c.ram_gb = 0.01
     for svc in services:
         if phase in ("normal", "congestion"):
-            svc.execution_rate_hz = svc._baseline_rate * random.uniform(0.95, 1.05)
+            svc.execution_rate_hz = svc._baseline_rate * rng.uniform(0.95, 1.05)
         elif phase == "peak":
-            svc.execution_rate_hz = svc._baseline_rate * 1.5 * random.uniform(0.95, 1.05)
+            svc.execution_rate_hz = svc._baseline_rate * 1.5 * rng.uniform(0.95, 1.05)
         elif phase == "heavy_exec":
             for c in svc.containers:
                 if c._baseline_exec_time is not None:
-                    c.exec_time = c._baseline_exec_time * 1.2 * random.uniform(0.95, 1.05)
+                    c.exec_time = c._baseline_exec_time * 1.2 * rng.uniform(0.95, 1.05)
         elif phase == "low_traffic":
-            svc.execution_rate_hz = svc._baseline_rate * 0.5 * random.uniform(0.95, 1.05)
+            svc.execution_rate_hz = svc._baseline_rate * 0.5 * rng.uniform(0.95, 1.05)
     if phase == "congestion" and congestion_factor != 1.0:
         return ScaledLatency(latency_ref, congestion_factor)
     return latency_ref
@@ -356,6 +364,7 @@ def main():
                 setattr(nm, _name, _guard(getattr(nm, _name), lambda *a, _id=n.node_id, **k: _id))
 
     background = DynamicScenario()
+    random.seed(sub_seed(args.seed, "background"))
     background.initialize_baseline_loads(nodes)
     step_minutes = args.step_seconds / 60.0
 
@@ -404,11 +413,14 @@ def main():
             metrics.get_latency_matrix = lambda nodes=None, _m=m: _m.copy()
         elif wifi is not None:
             latency = metrics.get_latency_matrix(nodes)
-        step_latency = apply_phase(services, phase, args.congestion_factor, None, latency)
+        scenario_rng = random.Random(sub_seed(args.seed, step, "scenario"))
+        step_latency = apply_phase(services, phase, args.congestion_factor, None, latency, rng=scenario_rng)
         for name, pol in policies.items():
             pol.latency_matrix = step_latency
             cur = current[name]
             failed = False
+            random.seed(sub_seed(args.seed, step, name))
+            np.random.seed(sub_seed(args.seed, step, name))
             t0 = time.perf_counter()
             try:
                 with mute():
@@ -438,6 +450,7 @@ def main():
             if moved:
                 realloc[name] += 1
             current[name] = copy.deepcopy(new)
+            random.seed(sub_seed(args.seed, step, "metrics"))  # same evaluation draws for every policy
             with mute():
                 lat, energy, viol, bat, usage = TrainUtils.calculate_metrics(
                     new, services, nodes, step_latency, time_step_minutes=step_minutes,
@@ -445,6 +458,7 @@ def main():
                 strict = TrainUtils.strict_validate_placement(new, services, nodes, step_latency)
                 # L_tot as defined in the paper (R2-3): end-to-end latency over blocking
                 # dependencies only. The legacy metric above also walks non-blocking edges.
+                random.seed(sub_seed(args.seed, step, "metrics"))
                 lat_blocking = TrainUtils.calculate_metrics(
                     new, blocking_view(services), nodes, step_latency, time_step_minutes=step_minutes,
                     scenario=background, step=step)[0]
