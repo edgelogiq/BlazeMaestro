@@ -3,7 +3,7 @@
 
 .vscode/
 
-.venv/
+.venv*/
 
 src/.venv/
 
@@ -17,3 +17,8 @@ logs/
 
 doc/**/*.tex
 src/config/services copy.xml
+
+out/campaign/*
+!out/campaign/train/
+out/final_backup/
+out/campaign/train/**/*.log
