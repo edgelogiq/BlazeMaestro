@@ -7,6 +7,7 @@ with caching to reduce repeated native calls.
 """
 
 import xml.etree.ElementTree as ET
+import os
 import numpy as np
 from typing import Dict, Tuple, Set, List, Any, Union
 
@@ -93,6 +94,21 @@ def _dijkstra(graph: Dict[str, List[Tuple[str, float]]], src: str) -> Dict[str, 
     return dist
 
 
+def _routed_by_simgrid(platform_xml_path: str, node_ids: List[str],
+                       link_latency: Dict[str, float], fallback: np.ndarray) -> np.ndarray:
+    """Base latency matrix from SimGrid's routing when the bindings are installed.
+
+    Falls back to the XML shortest-path matrix when SimGrid is missing or fails, or when
+    BLAZE_LATENCY_BACKEND=dijkstra is set.
+    """
+    if os.environ.get("BLAZE_LATENCY_BACKEND", "simgrid").lower() == "dijkstra":
+        return fallback
+    from .simgrid_routing import latency_matrix
+    loops = {nid: float(link_latency[f"{nid}-loop"]) for nid in node_ids if f"{nid}-loop" in link_latency}
+    routed = latency_matrix(platform_xml_path, node_ids, loops)
+    return routed if routed is not None else fallback
+
+
 class NetworkUtil:
     """Namespace for network-related utilities (static methods)."""
 
@@ -124,7 +140,7 @@ class NetworkUtil:
                         mat[src_i, j] = float(link_latency.get(loopback_id, 0.0))
                     else:
                         mat[src_i, j] = float(dj)
-        return mat
+        return _routed_by_simgrid(platform_xml_path, node_ids, link_latency, mat)
 
     @staticmethod
     def build_latency_matrix_with_jitter(
@@ -173,6 +189,7 @@ class NetworkUtil:
                     mat[src_i, j] = float(dj)
                     links = route_links.get((nid, vid), route_links.get((vid, nid), []))
                     link_mapping[(src_i, j)] = links[0] if links else f"{nid}-{vid}"
+        mat = _routed_by_simgrid(platform_xml_path, node_ids, link_latency, mat)
         jitter_model = NetworkJitterModel(
             base_jitter_percent=jitter_percent,
             wifi_jitter_multiplier=2.0,
