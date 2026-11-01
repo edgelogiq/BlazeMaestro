@@ -40,6 +40,7 @@ from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Orchestrator.autoencoder_orchestrator impo
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Metrics.simulator_facade import SimulatorMetricsFacade
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Orchestrator.orchestrator_utils import OrchestratorUtils
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Utils.wifi_mobility_controller import WiFiMobilityController
+from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Simulator.util import network_util
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Simulator.util.network_util import NetworkUtil
 from train_utils import TrainUtils, DynamicScenario
 from campaign.simpy_exec import simulate_step
@@ -292,6 +293,8 @@ def main():
     ap.add_argument("--simpy-exec", action="store_true",
                     help="also execute each decision in SimPy (CPU/GPU contention, queueing) over the step "
                          "and record the simulated latency, energy and deadline misses (*_sim fields)")
+    ap.add_argument("--require-simgrid", action="store_true",
+                    help="abort if the base latency matrix was not computed by SimGrid's routing")
     args = ap.parse_args()
 
     seed_everything(args.seed)
@@ -348,6 +351,10 @@ def main():
             pol._placement_history, pol._history_window = {}, 3  # BaseNSGA2 skips super().__init__
 
     base_latency_fn = metrics.get_latency_matrix  # platform matrix + current WiFi state
+    base_latency_fn(nodes)
+    latency_backend = network_util.LATENCY_BACKEND_USED
+    if args.require_simgrid and latency_backend != "simgrid":
+        sys.exit(f"SimGrid routing required but the latency backend is {latency_backend}")
 
     # Node outage = node reported with zero capacity (NotReady) to every feasibility check,
     # in addition to unreachable links. down_now is updated at each decision step.
@@ -506,7 +513,7 @@ def main():
             })
 
     out = {
-        "config": {**vars(args), "duration_seconds": len(phases) * args.step_seconds,
+        "config": {**vars(args), "latency_backend": latency_backend, "duration_seconds": len(phases) * args.step_seconds,
                    "time_step_seconds": args.step_seconds, "scenarios": phases},
         "results": results, "reassignment_counts": realloc,
         "cumulative_battery_usage": {k: dict(v) for k, v in battery.items()},

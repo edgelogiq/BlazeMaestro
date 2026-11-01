@@ -94,6 +94,10 @@ def _dijkstra(graph: Dict[str, List[Tuple[str, float]]], src: str) -> Dict[str, 
     return dist
 
 
+# Backend that produced the last base latency matrix ("simgrid" or "dijkstra").
+LATENCY_BACKEND_USED = None
+
+
 def _routed_by_simgrid(platform_xml_path: str, node_ids: List[str],
                        link_latency: Dict[str, float], fallback: np.ndarray) -> np.ndarray:
     """Base latency matrix from SimGrid's routing when the bindings are installed.
@@ -101,11 +105,14 @@ def _routed_by_simgrid(platform_xml_path: str, node_ids: List[str],
     Falls back to the XML shortest-path matrix when SimGrid is missing or fails, or when
     BLAZE_LATENCY_BACKEND=dijkstra is set.
     """
+    global LATENCY_BACKEND_USED
     if os.environ.get("BLAZE_LATENCY_BACKEND", "simgrid").lower() == "dijkstra":
+        LATENCY_BACKEND_USED = "dijkstra"
         return fallback
     from .simgrid_routing import latency_matrix
     loops = {nid: float(link_latency[f"{nid}-loop"]) for nid in node_ids if f"{nid}-loop" in link_latency}
     routed = latency_matrix(platform_xml_path, node_ids, loops)
+    LATENCY_BACKEND_USED = "simgrid" if routed is not None else "dijkstra"
     return routed if routed is not None else fallback
 
 
