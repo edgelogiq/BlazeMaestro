@@ -42,6 +42,7 @@ from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Orchestrator.orchestrator_utils import Orc
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Utils.wifi_mobility_controller import WiFiMobilityController
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Simulator.util.network_util import NetworkUtil
 from train_utils import TrainUtils, DynamicScenario
+from campaign.simpy_exec import simulate_step
 from campaign.baselines import (KinitosInspiredBaseline, KubeDefaultBaseline, LayerPinnedBaseline, OneShotBaseline,
                                 StaticInitialBaseline)
 
@@ -288,6 +289,9 @@ def main():
                     help="multiplier on link latencies during phase IV (1.0 = legacy behaviour)")
     ap.add_argument("--output", required=True)
     ap.add_argument("--quiet", action="store_true", help="silence orchestrator prints")
+    ap.add_argument("--simpy-exec", action="store_true",
+                    help="also execute each decision in SimPy (CPU/GPU contention, queueing) over the step "
+                         "and record the simulated latency, energy and deadline misses (*_sim fields)")
     args = ap.parse_args()
 
     seed_everything(args.seed)
@@ -470,6 +474,23 @@ def main():
             if failed:
                 viol = list(viol or []) + ["Inference failure"]
             batt_energy = sum(b["total_energy_j"] for b in bat.values())
+            sim = {}
+            if args.simpy_exec:
+                bg = {n.node_id: background.get_baseline_load(n.node_id, step)["cpu"] for n in nodes}
+                ex = simulate_step(new, services, nodes, per_service, bg, args.step_seconds,
+                                   random.Random(sub_seed(args.seed, step, name, "simpy")), down=down)
+                ps = ex["per_service"]
+                l_sim = {sid: per_service.get(sid, 0.0) + v["wait_mean"] for sid, v in ps.items()}
+                sim = {
+                    "latency_sim": sum(l_sim.values()), "latency_max_service_sim": max(l_sim.values(), default=0.0),
+                    # battery energy with the service share replaced by the simulated busy time
+                    "energy_sim": sum(b["total_energy_j"] - b["energy_j"] for b in bat.values())
+                                  + sum(ex["service_energy_j"].values()),
+                    "deadline_miss_services_sim": sum(1 for v in ps.values() if v["misses"]),
+                    "deadline_miss_jobs_sim": sum(v["misses"] for v in ps.values()),
+                    "jobs_sim": sum(v["jobs"] for v in ps.values()),
+                    "wait_mean_sim": float(np.mean([v["wait_mean"] for v in ps.values()])) if ps else 0.0,
+                }
             for nid, b in bat.items():
                 battery[name][nid] += b["energy_ah"]
             results[name].append({
@@ -481,6 +502,7 @@ def main():
                 "services_moved": moved, "decision_time_s": dt,
                 "services_on_robot": sum(1 for sid, nid in new.items()
                                          if nid in battery_ids and sid not in locked_ids),
+                **sim,
             })
 
     out = {
