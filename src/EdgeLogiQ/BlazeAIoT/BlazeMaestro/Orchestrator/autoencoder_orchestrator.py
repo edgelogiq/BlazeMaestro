@@ -445,8 +445,11 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
         # Train for one batch
         self.train(num_batches=1)
         
-        # Get placement after training
-        placement = self.optimize(services)
+        # Get placement after training (a scenario may have no feasible placement)
+        try:
+            self.optimize(services)
+        except RuntimeError:
+            pass
     
     def _train_single_batch(self, all_nodes, services, latency):
         """Perform a single training batch for the autoencoder and return (loss, violation_count)"""
