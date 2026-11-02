@@ -409,6 +409,10 @@ class BaseOrchestrator(ABC):
                 dep_id = getattr(dep, "service_id", None)
                 if not isinstance(dep_id, str):
                     continue
+                # Order on blocking dependencies only: asynchronous feedback edges would
+                # create cycles (e.g. driver <- control loop) and fall back to file order.
+                if getattr(dep, "blocking", True) is False:
+                    continue
                 if dep_id in svc_map:
                     indegree[svc_id] += 1
                     graph.setdefault(dep_id, []).append(svc_id)

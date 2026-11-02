@@ -104,7 +104,48 @@ class OrchestratorUtils:
         (2) t_exec(s,n) + L_dep^hard(s,n) <= (1 - PERIOD_JITTER_MARGIN) * T_period(s),
         where L_dep^hard is the transitive latency over blocking, hard dependencies that
         are already placed in ``placement`` (partial placements are allowed).
+        Services already placed downstream of ``svc`` (e.g. a pinned control loop) are
+        re-checked with ``svc`` on ``node_id``, since their latency now depends on it.
         """
+        if not self._own_period_ok(svc, node_id, placement):
+            return False
+        sid = str(getattr(svc, 'service_id', ''))
+        trial = None
+        for down in self._placed_downstream(sid, placement):
+            if trial is None:
+                trial = dict(placement)
+                trial[sid] = str(node_id)
+            if not self._own_period_ok(down, trial[str(getattr(down, 'service_id', ''))], trial):
+                return False
+        return True
+
+    def _placed_downstream(self, sid: str, placement: Dict[str, str]) -> List[Any]:
+        """Placed services whose hard blocking dependency chain contains ``sid``."""
+        children = getattr(self, '_children', None)
+        if children is None:
+            children = self._children = self._hard_children()
+        out, seen, stack = [], {sid}, list(children.get(sid, []))
+        while stack:
+            s = stack.pop()
+            cid = str(getattr(s, 'service_id', ''))
+            if cid in seen:
+                continue
+            seen.add(cid)
+            if cid in placement:
+                out.append(s)
+            stack.extend(children.get(cid, []))
+        return out
+
+    def _hard_children(self) -> Dict[str, List[Any]]:
+        children: Dict[str, List[Any]] = {}
+        for s in self.services:
+            for dep in getattr(s, 'dependencies', []) or []:
+                if getattr(dep, 'blocking', True) is False or getattr(dep, 'constraint_level', 'hard') != 'hard':
+                    continue
+                children.setdefault(str(getattr(dep, 'service_id', '')), []).append(s)
+        return children
+
+    def _own_period_ok(self, svc: Any, node_id: str, placement: Dict[str, str]) -> bool:
         _, _, _, exec_time, period = self._service_demands(svc, node_id)
         if not (0 < period < float('inf')):
             return True

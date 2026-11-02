@@ -222,7 +222,8 @@ class GreedyWeightedOrchestrator(BaseOrchestrator):
         # Seed with the current assignment so services outside svcs keep their node
         placement: Dict[str, str] = {}
         if hasattr(self, '_current_assignment') and self._current_assignment:
-            placement = dict(self._current_assignment)
+            ids = {str(getattr(s, 'service_id', '')) for s in svcs}
+            placement = {k: v for k, v in self._current_assignment.items() if k not in ids}
         
         # Place services in topological order, depth-first in (energy, latency, balance) order
         # with backtracking: when a service has no feasible candidate, revisit earlier choices

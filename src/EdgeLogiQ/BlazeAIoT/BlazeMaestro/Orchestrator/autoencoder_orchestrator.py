@@ -234,7 +234,8 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
         # Seed with the current assignment so services outside svcs keep their node
         placement_map: Dict[str, str] = {}
         if hasattr(self, '_current_assignment') and self._current_assignment:
-            placement_map = dict(self._current_assignment)
+            ids = {str(getattr(s, 'service_id', '')) for s in svcs}
+            placement_map = {k: v for k, v in self._current_assignment.items() if k not in ids}
 
         # Seed node usage with current load from non-optimizable services
         node_index_by_id = {str(getattr(n, 'node_id', i)): i for i, n in enumerate(self.nodes)}

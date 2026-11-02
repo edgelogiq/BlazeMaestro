@@ -252,7 +252,7 @@ class BaseNSGA2Orchestrator(BaseOrchestrator):
             service_network_latency = self._dependency_wait(s_idx, n_idx, assignment)
             total_latency += service_network_latency
 
-            if period < float('inf') and not period_utils.service_period_ok(svc, nid, placement_map):
+            if period < float('inf') and not period_utils._own_period_ok(svc, nid, placement_map):  # full placement: own test suffices
                 period_violations += 1
 
         # E(x): energy of the battery-powered nodes (paper Eqs. 1-3), per second of operation
