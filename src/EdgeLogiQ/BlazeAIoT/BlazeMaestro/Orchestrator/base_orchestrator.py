@@ -140,13 +140,10 @@ class BaseOrchestrator(ABC):
             cur_violations_list = validation_utils.validate_placement(current_assignment, log_warnings=False)
             cur_violations = len(cur_violations_list)
 
-            new_score = self._assignment_score(new_assignment)
-            cur_score = self._assignment_score(current_assignment)
-            
-            new_violations, new_energy = new_score
-            
-            # Use the re-validated violation count for the current assignment
-            _, cur_energy = cur_score
+            # Feasibility = V(x) for both placements; energy = E(x) of paper Eqs. 1-3
+            new_violations = len(validation_utils.validate_placement(new_assignment, log_warnings=False))
+            new_energy = sum(OrchestratorUtils.placement_energy(new_assignment, self.services, self.nodes).values())
+            cur_energy = sum(OrchestratorUtils.placement_energy(current_assignment, self.services, self.nodes).values())
             
             if os.getenv('DEBUG_HYSTERESIS'):
                 print(f"[HYSTERESIS] new_score=(violations={new_violations}, energy={new_energy:.2f}), "

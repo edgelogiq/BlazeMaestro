@@ -10,7 +10,7 @@ A job on an unreachable node never completes.
 Returned per service: jobs released, jobs completed, deadline misses (response time
 above T_s * (1 - margin), or not completed) and mean queueing wait; per battery node,
 the service energy computed with the evaluator's power model applied to the simulated
-busy time instead of t_exec * rate * duration.
+busy time (cores x busy seconds) in place of the analytical period-scaled demand.
 """
 
 from __future__ import annotations
@@ -21,14 +21,6 @@ from typing import Any, Dict, Iterable, Sequence
 import simpy
 
 from EdgeLogiQ.BlazeAIoT.BlazeMaestro.Orchestrator.orchestrator_utils import OrchestratorUtils
-
-
-def _power(node, cpu_needed: float, gpu_needed: float) -> float:
-    base = getattr(node, "power_jetson_base", getattr(node, "power_base", 5.0))
-    active = getattr(node, "power_jetson_active", getattr(node, "power_active", 30.0))
-    gpu_cap = node.gpu.capacity if node.gpu else 0.0
-    util = cpu_needed / max(node.cpu, 1.0) + (gpu_needed / max(gpu_cap, 1.0) if gpu_cap > 0 else 0.0)
-    return base + (active - base) * min(1.0, util)
 
 
 def simulate_step(placement: Dict[str, str], services: Sequence[Any], nodes: Sequence[Any],
@@ -57,7 +49,10 @@ def simulate_step(placement: Dict[str, str], services: Sequence[Any], nodes: Seq
             yield gpu[nid].get(gpu_gb)
         start = env.now
         yield env.timeout(exec_time)
-        st["busy"] += max(0.0, min(env.now, horizon_s) - min(start, horizon_s))
+        busy = max(0.0, min(env.now, horizon_s) - min(start, horizon_s))
+        st["busy"] += busy
+        st["cpu_busy"] += cores * busy
+        st["gpu_busy"] += gpu_gb * busy
         yield cpu[nid].put(cores)
         if gpu_gb > 0:
             yield gpu[nid].put(gpu_gb)
@@ -72,7 +67,7 @@ def simulate_step(placement: Dict[str, str], services: Sequence[Any], nodes: Seq
         cores = sum(c.cpu for c in svc.containers)
         gpu_gb = sum(c.gpu_gb for c in svc.containers)
         st = stats[sid] = {"jobs": 0, "done": 0, "late": 0, "wait": 0.0, "busy": 0.0,
-                           "power": _power(node, cores, gpu_gb), "node": nid}
+                           "cpu_busy": 0.0, "gpu_busy": 0.0, "node": nid}
         if not (0 < period < float("inf")):
             return
         cores = min(cores, max(free[nid], 1e-3))  # a job never asks more than the free cores
@@ -89,12 +84,16 @@ def simulate_step(placement: Dict[str, str], services: Sequence[Any], nodes: Seq
             env.process(releaser(sid, nid))
     env.run(until=horizon_s * 3)  # let the jobs released before the horizon finish
 
-    per_service, energy = {}, {}
+    per_service = {}
+    busy = {n.node_id: [0.0, 0.0] for n in nodes if getattr(n, "battery_powered", False)}
     for sid, st in stats.items():
         misses = st["late"] + (st["jobs"] - st["done"])
         per_service[sid] = {"jobs": st["jobs"], "done": st["done"], "misses": misses,
                             "wait_mean": st["wait"] / st["done"] if st["done"] else 0.0}
-        node = node_by_id[st["node"]]
-        if getattr(node, "battery_powered", False):
-            energy[st["node"]] = energy.get(st["node"], 0.0) + st["power"] * st["busy"]
-    return {"per_service": per_service, "service_energy_j": energy}
+        if st["node"] in busy:
+            busy[st["node"]][0] += st["cpu_busy"]
+            busy[st["node"]][1] += st["gpu_busy"]
+    # Paper Eqs. 1-3 with the utilization of each battery-powered node measured over the step
+    energy = {nid: OrchestratorUtils.node_power(node_by_id[nid], c / horizon_s, g / horizon_s) * horizon_s
+              for nid, (c, g) in busy.items()}
+    return {"per_service": per_service, "node_energy_j": energy}

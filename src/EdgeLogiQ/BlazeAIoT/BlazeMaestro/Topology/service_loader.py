@@ -145,6 +145,13 @@ class ServiceDefinitionLoader:
         if usage_by_node:
             setattr(service, "instance_usage_by_node", usage_by_node)
 
+        # A service excluded from orchestration is not moved, but its deadline still depends on
+        # where its upstream services run: pin it to the node it was measured on so that V(x)
+        # checks its period like any other node-locked service.
+        if (exclude_from_orchestration and not getattr(service, "is_daemonset", False)
+                and getattr(service, "locked_node_id", None) is None and usage_by_node):
+            service.locked_node_id = next(iter(usage_by_node))
+
         return service
 
     def _parse_instance_usage_by_node(self, service_elem: ET.Element) -> Dict[str, Dict[str, Optional[float]]]:
@@ -229,7 +236,7 @@ class ServiceDefinitionLoader:
 
             cpu = float(container_elem.get('cpu', '1.0'))
             ram_gb = float(container_elem.get('ram_gb', '1.0'))
-            gpu_gb = float(container_elem.get('gpu_gb', '0.0'))
+            gpu_gb = float(container_elem.get('gpu_gb') or container_elem.get('gpu') or '0.0')  # GPU memory (GB)
             # Only parse exec_time if present - don't use default for non-time-constrained services
             exec_time = float(container_elem.get('exec_time')) if container_elem.get('exec_time') else None
             image_size_gb = float(container_elem.get('image_size_gb', '0.5'))

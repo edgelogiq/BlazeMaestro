@@ -121,14 +121,14 @@ class OrchestratorUtils:
         violations = []
         logger = BlazeLogger.get_instance()
         for svc in self.services:
-            if getattr(svc, 'exclude_from_orchestration', False):
-                continue
             if getattr(svc, 'is_daemonset', False):
                 continue
             sid = str(getattr(svc, 'service_id', ''))
             nid = placement.get(sid)
             if not nid:
-                violations.append(f"Service {sid} not placed")
+                # A service excluded from orchestration is checked only where it runs.
+                if not getattr(svc, 'exclude_from_orchestration', False):
+                    violations.append(f"Service {sid} not placed")
                 continue
             
             node = self.node_map.get(nid)
@@ -172,7 +172,7 @@ class OrchestratorUtils:
         # reported with zero capacity (e.g. NotReady) is therefore infeasible for any service.
         demand: Dict[str, List[float]] = {}
         for svc in self.services:
-            if getattr(svc, 'exclude_from_orchestration', False) or getattr(svc, 'is_daemonset', False):
+            if getattr(svc, 'is_daemonset', False):
                 continue
             nid = placement.get(str(getattr(svc, 'service_id', '')))
             node = self.node_map.get(nid) if nid else None
@@ -344,8 +344,6 @@ class OrchestratorUtils:
         """L_tot surrogate: sum over services of the full dependency-tree latency."""
         total = 0.0
         for svc in self.services:
-            if getattr(svc, 'exclude_from_orchestration', False):
-                continue
             idx = self.node_index_map.get(str(placement.get(str(getattr(svc, 'service_id', '')), '')))
             if idx is not None:
                 total += self._latency_cost_full(svc, idx, placement)
@@ -357,13 +355,15 @@ class OrchestratorUtils:
         """Hysteresis rule on both objectives (energy, latency).
 
         A feasible candidate replaces a feasible current placement when one objective
-        improves by at least ``threshold`` (relative) while the other does not degrade by
-        more than ``threshold``. Returns (accept, energy_gain, latency_gain).
+        strictly improves by at least ``threshold`` (relative) while the other does not
+        degrade by more than ``threshold``; at a 0 threshold, a candidate with equal objectives
+        is not adopted. Returns (accept, energy_gain, latency_gain).
         """
-        e_gain = (cur_energy - new_energy) / max(1.0, cur_energy)
+        eps = 1e-9
+        e_gain = (cur_energy - new_energy) / max(1e-9, abs(cur_energy))
         l_gain = (cur_latency - new_latency) / max(1e-6, cur_latency)
-        accept = ((e_gain >= threshold and l_gain >= -threshold)
-                  or (l_gain >= threshold and e_gain >= -threshold))
+        accept = ((e_gain >= threshold and e_gain > eps and l_gain >= -threshold)
+                  or (l_gain >= threshold and l_gain > eps and e_gain >= -threshold))
         return accept, e_gain, l_gain
 
     @staticmethod
@@ -382,7 +382,41 @@ class OrchestratorUtils:
         except Exception as e:
             BlazeLogger.get_instance().debug(f"Failed to get latency matrix: {e}")
         return None
-    
+
+    @staticmethod
+    def node_power(node: Any, cpu_eff: float, gpu_eff: float) -> float:
+        """P_n = P_idle + alpha (r_CPU + r_GPU), alpha = P_active - P_idle (paper Eq. 1).
+
+        cpu_eff and gpu_eff are the aggregate period-scaled CPU and GPU demands of the
+        services co-located on the node (paper Eq. 2).
+        """
+        p_idle = float(getattr(node, 'power_jetson_base', getattr(node, 'power_base', 5.0)))
+        p_active = float(getattr(node, 'power_jetson_active', getattr(node, 'power_active', 30.0)))
+        cpu_cap = float(getattr(node, 'cpu', 0.0) or 0.0)
+        gpu_cap = float(node.gpu.capacity) if getattr(node, 'gpu', None) else 0.0
+        r_cpu = cpu_eff / cpu_cap if cpu_cap > 0 else 0.0
+        r_gpu = gpu_eff / gpu_cap if gpu_cap > 0 else 0.0
+        return p_idle + (p_active - p_idle) * (r_cpu + r_gpu)
+
+    @staticmethod
+    def placement_energy(placement: Dict[str, str], services: Any, nodes: Any, dt: float = 1.0) -> Dict[str, float]:
+        """E_drain^n = P_n dt for every battery-powered node under placement x (paper Eqs. 1-3).
+
+        Returns {node_id: joules}; E(x) over one step is the sum of the values.
+        """
+        node_map = {str(getattr(n, 'node_id', '')): n for n in nodes}
+        demand: Dict[str, List[float]] = {nid: [0.0, 0.0] for nid, n in node_map.items()
+                                          if getattr(n, 'battery_powered', False)}
+        for svc in services:
+            nid = placement.get(str(getattr(svc, 'service_id', '')))
+            if nid not in demand:
+                continue
+            cpu, _, gpu, exec_time, period = OrchestratorUtils.calculate_service_demands(svc, nid)
+            duty = min(1.0, exec_time / period) if 0 < period < float('inf') else 1.0
+            demand[nid][0] += cpu * duty
+            demand[nid][1] += gpu * duty
+        return {nid: OrchestratorUtils.node_power(node_map[nid], c, g) * dt for nid, (c, g) in demand.items()}
+
     @staticmethod
     def estimate_energy(service: Any, node: Any) -> float:
         """Estimate energy cost for placing a service on a node.

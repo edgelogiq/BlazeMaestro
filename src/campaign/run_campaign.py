@@ -135,26 +135,29 @@ def seed_everything(seed: int) -> None:
 
 
 def apply_phase(services, phase: str, congestion_factor: float, base_latency, latency_ref, rng=random):
-    """Mutate services in place for the given phase; returns the latency matrix to use."""
+    """Set the services' load for the given phase; returns the latency matrix to use.
+
+    Rates and execution times are scaled from their measured baseline, including the
+    per-node measurements that V(x) and the evaluator use (TrainUtils.scale_service_load).
+    """
     for svc in services:
-        svc.execution_rate_hz = svc._baseline_rate
         for c in svc.containers:
-            c.exec_time = c._baseline_exec_time
             if getattr(c, "cpu", 0) < 0.05:
                 c.cpu = 0.05
             if getattr(c, "ram_gb", 0) < 0.01:
                 c.ram_gb = 0.01
     for svc in services:
+        rate_f, exec_f = 1.0, 1.0
         if phase in ("normal", "congestion"):
-            svc.execution_rate_hz = svc._baseline_rate * rng.uniform(0.95, 1.05)
+            rate_f = rng.uniform(0.95, 1.05)
         elif phase == "peak":
-            svc.execution_rate_hz = svc._baseline_rate * 1.5 * rng.uniform(0.95, 1.05)
+            rate_f = 1.5 * rng.uniform(0.95, 1.05)
         elif phase == "heavy_exec":
-            for c in svc.containers:
-                if c._baseline_exec_time is not None:
-                    c.exec_time = c._baseline_exec_time * 1.2 * rng.uniform(0.95, 1.05)
+            draws = [1.2 * rng.uniform(0.95, 1.05) for c in svc.containers if c._baseline_exec_time is not None]
+            exec_f = draws[0] if draws else 1.0
         elif phase == "low_traffic":
-            svc.execution_rate_hz = svc._baseline_rate * 0.5 * rng.uniform(0.95, 1.05)
+            rate_f = 0.5 * rng.uniform(0.95, 1.05)
+        TrainUtils.scale_service_load(svc, rate_f, exec_f)
     if phase == "congestion" and congestion_factor != 1.0:
         return ScaledLatency(latency_ref, congestion_factor)
     return latency_ref
@@ -392,6 +395,7 @@ def main():
         # Evenly spaced subsample that keeps every phase (scalability runs).
         phases = [PHASES[int(i * len(PHASES) / args.num_steps)] for i in range(args.num_steps)]
     battery_ids = {n.node_id for n in nodes if getattr(n, "battery_powered", False)}
+    node_by_id = {n.node_id: n for n in nodes}
     locked_ids = {s.service_id for s in services if getattr(s, "locked_node_id", None) is not None}
     for step, phase in enumerate(phases):
         if wifi is not None:
@@ -476,11 +480,13 @@ def main():
             per_service = latency_per_service(new, services, nodes, step_latency)
             l_tot = sum(per_service.values())          # paper L_tot(x) = sum_s L_s(x)
             l_max = max(per_service.values()) if per_service else 0.0  # min-max variant (R1-10)
-            if strict:
-                viol = strict
+            # Reported violations = V(x), the shared feasibility checker (plus failed decisions)
+            viol = list(strict or [])
             if failed:
-                viol = list(viol or []) + ["Inference failure"]
-            batt_energy = sum(b["total_energy_j"] for b in bat.values())
+                viol.append("Inference failure")
+            # E(x) of paper Eqs. 1-3 over this step (battery-powered nodes)
+            node_energy = OrchestratorUtils.placement_energy(new, services, nodes, args.step_seconds)
+            batt_energy = sum(node_energy.values())
             sim = {}
             if args.simpy_exec:
                 bg = {n.node_id: background.get_baseline_load(n.node_id, step)["cpu"] for n in nodes}
@@ -490,20 +496,20 @@ def main():
                 l_sim = {sid: per_service.get(sid, 0.0) + v["wait_mean"] for sid, v in ps.items()}
                 sim = {
                     "latency_sim": sum(l_sim.values()), "latency_max_service_sim": max(l_sim.values(), default=0.0),
-                    # battery energy with the service share replaced by the simulated busy time
-                    "energy_sim": sum(b["total_energy_j"] - b["energy_j"] for b in bat.values())
-                                  + sum(ex["service_energy_j"].values()),
+                    # E(x) with the node utilization measured from the simulated busy time
+                    "energy_sim": sum(ex["node_energy_j"].values()),
                     "deadline_miss_services_sim": sum(1 for v in ps.values() if v["misses"]),
                     "deadline_miss_jobs_sim": sum(v["misses"] for v in ps.values()),
                     "jobs_sim": sum(v["jobs"] for v in ps.values()),
                     "wait_mean_sim": float(np.mean([v["wait_mean"] for v in ps.values()])) if ps else 0.0,
                 }
-            for nid, b in bat.items():
-                battery[name][nid] += b["energy_ah"]
+            for nid, e_j in node_energy.items():
+                battery[name][nid] += e_j / (float(getattr(node_by_id[nid], "battery_voltage", 3.7)) * 3600.0)
             results[name].append({
                 "time": f"T={int(step * args.step_seconds)}s", "step": step, "scenario": phase,
                 "latency": l_tot, "latency_max_service": l_max,
-                "latency_e2e_path": lat_blocking, "latency_all_edges": lat, "energy": batt_energy, "service_energy": energy,
+                "latency_e2e_path": lat_blocking, "latency_all_edges": lat, "energy": batt_energy,
+                "energy_legacy": sum(b["total_energy_j"] for b in bat.values()),
                 "violations": len(viol or []), "violation_details": list(viol or [])[:5],
                 "assignments": new, "battery_usage": bat, "reassigned": moved > 0,
                 "services_moved": moved, "decision_time_s": dt,

@@ -131,8 +131,12 @@ class OrchestrationContext:
         """
         if current_assignment is not None and len(current_assignment) == len(new_assignment):
             # Score BOTH assignments with current service parameters (handles dynamic scenarios)
-            new_violations, new_energy = self._assignment_score(new_assignment)
-            cur_violations, cur_energy = self._assignment_score(current_assignment)
+            # Feasibility = V(x); energy = E(x) of paper Eqs. 1-3 (battery-powered nodes)
+            check = OrchestratorUtils(self.services, self.nodes, self.get_latency_matrix())
+            new_violations = len(check.validate_placement(new_assignment, log_warnings=False))
+            cur_violations = len(check.validate_placement(current_assignment, log_warnings=False))
+            new_energy = sum(OrchestratorUtils.placement_energy(new_assignment, self.services, self.nodes).values())
+            cur_energy = sum(OrchestratorUtils.placement_energy(current_assignment, self.services, self.nodes).values())
             
             if os.getenv('DEBUG_HYSTERESIS'):
                 print(f"[HYSTERESIS] new=(violations={new_violations}, energy={new_energy:.2f}), "

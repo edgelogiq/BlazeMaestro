@@ -11,7 +11,7 @@ services XML (same schema as src/config/services_sim.xml) controlled by:
 - depth        maximum depth of the extra service trees hung under each robot's graph
 
 Per robot, the core graph mirrors the testbed application: a node-locked driver
-(robot-k), slam-k <- robot-k, localization-k <- robot-k, estop-k (GPU, soft dependency).
+(robot-k), slam-k <- robot-k, localization-k <- robot-k, estop-k (1 GB of GPU memory, soft dependency).
 The remaining services form random trees of blocking dependencies rooted at slam-k or
 localization-k, up to ``depth`` levels. Execution times scale with node speed; GPU
 services only have measurements on GPU nodes (elsewhere they fall back to a 10x slower
@@ -74,6 +74,7 @@ def make_platform(n_nodes, n_robots, n_clusters, rng):
                 '      <prop id="layer" value="edge" />',
                 '      <prop id="gpu.count" value="1" />',
                 '      <prop id="gpu.memGB" value="8" />',
+                '      <prop id="gpu.shared" value="true" />',
                 '      <prop id="schedulable" value="true" />',
                 '    </host>']
     out.append('    <router id="core-router" />')
@@ -140,7 +141,8 @@ def make_services(n_services, robots, hosts, depth, rng):
             out.append('    </dependencies>')
         fallback = s["exec_ref"] * (10.0 if s["gpu"] else 1.5)
         out.append('    <containers>')
-        out.append(f'      <container id="{s["id"]}-main" cpu="{s["cpu"]:.3f}" ram_gb="{s["ram"]:.3f}" '
+        gpu_attr = ' gpu_gb="1.0"' if s["gpu"] else ""
+        out.append(f'      <container id="{s["id"]}-main" cpu="{s["cpu"]:.3f}" ram_gb="{s["ram"]:.3f}"{gpu_attr} '
                    f'exec_time="{fallback:.6f}" />')
         out.append('    </containers>')
         out.append('    <instances>')

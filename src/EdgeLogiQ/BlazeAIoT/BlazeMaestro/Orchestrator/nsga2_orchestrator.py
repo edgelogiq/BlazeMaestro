@@ -265,6 +265,19 @@ class NSGA2Orchestrator(BaseNSGA2Orchestrator):
         
         return next_gen
 
+    def _select_final(self, population: List[List[int]]) -> List[int]:
+        scored = [(self._evaluate_assignment(a), a) for a in population]
+        best_v = min(v for (_, _, v, _), _ in scored)
+        front = [((e, l), a) for (e, l, v, _), a in scored if v == best_v]
+        e_min, e_max = min(o[0] for o, _ in front), max(o[0] for o, _ in front)
+        l_min, l_max = min(o[1] for o, _ in front), max(o[1] for o, _ in front)
+
+        def dist(o):
+            de = (o[0] - e_min) / (e_max - e_min) if e_max > e_min else 0.0
+            dl = (o[1] - l_min) / (l_max - l_min) if l_max > l_min else 0.0
+            return de * de + dl * dl
+        return min(front, key=lambda t: dist(t[0]))[1]
+
     def _assignment_to_result_dict(self, assignment: List[int]) -> Dict[str, str]:
         """Convert assignment list to service_id -> node_id mapping.
         
@@ -315,8 +328,10 @@ class NSGA2Orchestrator(BaseNSGA2Orchestrator):
             offspring = self._generate_offspring(population)
             population = self._select_next_generation(population, offspring)
         
-        # Select best assignment from final population
-        best_assignment = population[0] if population else [0 for _ in range(self.num_services)]
+        # Final deployment: among the individuals with the fewest violations (the first front
+        # under constrained domination), the one closest to the ideal point after min-max
+        # normalization of energy and latency.
+        best_assignment = self._select_final(population) if population else [0 for _ in range(self.num_services)]
         result = self._assignment_to_result_dict(best_assignment)
         
         # Restore original services

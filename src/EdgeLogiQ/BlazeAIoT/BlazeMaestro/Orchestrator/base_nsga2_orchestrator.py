@@ -216,9 +216,11 @@ class BaseNSGA2Orchestrator(BaseOrchestrator):
                 if node_layer != locked_layer:
                     valid = False
 
-            # Get service demands
+            # Get service demands (CPU scaled by the period duty cycle, as in V(x))
             nid = str(getattr(node, 'node_id', ''))
             cpu, ram, gpu, exec_time, period = self._service_demands(svc, nid)
+            if 0 < period < float('inf'):
+                cpu *= min(1.0, exec_time / period)
 
             # Aggregate resource usage
             node_cpu[n_idx] += cpu
@@ -245,9 +247,6 @@ class BaseNSGA2Orchestrator(BaseOrchestrator):
             if node_ram[n_idx] > float(caps.get("ram_gb", 0.0)):
                 valid = False
 
-            # Energy calculation (0 for grid-powered nodes)
-            total_energy += OrchestratorUtils.estimate_energy(svc, node)
-
             # L_tot(x) = sum_s L_s(x): transitive latency over blocking dependencies only (paper Eq. ltot_def)
             # Get network latency for this service's dependencies only
             service_network_latency = self._dependency_wait(s_idx, n_idx, assignment)
@@ -256,6 +255,8 @@ class BaseNSGA2Orchestrator(BaseOrchestrator):
             if period < float('inf') and not period_utils.service_period_ok(svc, nid, placement_map):
                 period_violations += 1
 
+        # E(x): energy of the battery-powered nodes (paper Eqs. 1-3), per second of operation
+        total_energy = sum(OrchestratorUtils.placement_energy(placement_map, self.services, self.nodes).values())
         return total_energy, total_latency, period_violations, valid
 
     def _is_assignment_valid(self, assignment: List[int]) -> bool:
@@ -287,8 +288,10 @@ class BaseNSGA2Orchestrator(BaseOrchestrator):
                 if node_layer != locked_layer:
                     return False
 
-            # Aggregate container needs
-            cpu, ram, gpu, _, _ = self._service_demands(svc)
+            # Aggregate container needs (CPU scaled by the period duty cycle, as in V(x))
+            cpu, ram, gpu, exec_time, period = self._service_demands(svc, str(getattr(node, 'node_id', '')))
+            if 0 < period < float('inf'):
+                cpu *= min(1.0, exec_time / period)
             node_cpu[n_idx] += cpu
 
             # RAM + GPU if shared

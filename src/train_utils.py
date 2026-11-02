@@ -100,98 +100,52 @@ class TrainUtils:
             details = ", ".join([f"{sid} -> {nid}" for sid, nid in missing])
             raise ValueError(f"Locked node(s) not found in platform: {details}")
     @staticmethod
-    def apply_service_scenario(services, scenario_name):
-        """Apply dynamic load scenarios to services (execution rates, exec times).
-        
-        Args:
-            services: List of Service objects to modify
-            scenario_name: One of 'normal', 'extreme_rate', 'heavy_exec', 'light_load', 
-                          'peak_traffic', 'stress_test', 'increased_workload'
+    def scale_service_load(svc, rate_factor: float = 1.0, exec_factor: float = 1.0):
+        """Set a service's execution rate and execution times to factor x their measured baseline.
+
+        Applies to the service-level values and to the per-node measurements
+        (instance_usage_by_node), which take precedence in V(x) and in the evaluator.
         """
-        import random
-        
-        # Store baseline rates if not already stored
-        for i in range(1, min(7, len(services))):
-            if not hasattr(services[i], '_baseline_rate'):
-                services[i]._baseline_rate = services[i].execution_rate_hz
-            if not hasattr(services[i].containers[0], '_baseline_exec_time'):
-                exec_t = services[i].containers[0].exec_time
-                services[i].containers[0]._baseline_exec_time = exec_t if exec_t is not None else 0.01
-        
-        if scenario_name == "normal":
-            # Reset to baseline rates with small variation (matches compare script T=0-10min)
-            services[1].execution_rate_hz = 10.0    # imu
-            services[2].execution_rate_hz = 10.0    # encoder
-            services[3].execution_rate_hz = 7.0     # slam_toolbox
-            services[4].execution_rate_hz = 10.0    # robot_localization
-            services[5].execution_rate_hz = 10.0    # pure_pursuit
-            services[6].execution_rate_hz = 10.0    # emergency_stop
-            # Apply random variation to all compute services (not sensors)
-            for i in range(1, 7):
-                services[i].execution_rate_hz *= random.uniform(0.95, 1.05)
-        
-        elif scenario_name == "peak_traffic":
-            # Matches the evaluation scenario at T=10-15 min (1.5x rate multiplier)
-            baseline_rates = [10.0, 10.0, 7.0, 10.0, 10.0, 10.0]  # imu, encoder, slam, loc, pursuit, stop
-            for i in range(1, 7):
-                services[i].execution_rate_hz = baseline_rates[i-1] * 1.5 * random.uniform(0.95, 1.05)
-            # robot_localization at 15Hz → period=0.0667s (tight!)
-            # emergency_stop at 15Hz → period=0.0667s (tight!)
-        
-        elif scenario_name == "stress_test":
-            # Even more aggressive than peak_traffic (2.0x multiplier)
-            # Forces DQN to learn ultra-conservative placements
-            baseline_rates = [10.0, 10.0, 7.0, 10.0, 10.0, 10.0]
-            for i in range(1, 7):
-                services[i].execution_rate_hz = baseline_rates[i-1] * 2.0 * random.uniform(0.95, 1.05)
-            # robot_localization at 20Hz → period=0.05s (very tight!)
-        
-        elif scenario_name == "increased_workload":
-            # Longer execution times (matches compare script T=15-20min)
-            # Combined with normal rates creates tight margins
-            for i in range(1, 7):
-                services[i].execution_rate_hz = getattr(services[i], '_baseline_rate', 10.0) * random.uniform(0.95, 1.05)
-                baseline_exec = getattr(services[i].containers[0], '_baseline_exec_time', None)
-                if baseline_exec is None:
-                    baseline_exec = services[i].containers[0].exec_time
-                if baseline_exec is None:
-                    baseline_exec = 0.01
-                services[i].containers[0].exec_time = baseline_exec * 1.2 * random.uniform(0.95, 1.05)
-        
-        elif scenario_name == "extreme_rate":
-            # High rates - will cause latency violations if not placed optimally
-            services[1].execution_rate_hz = 30.0    # imu: 33ms period
-            services[2].execution_rate_hz = 25.0    # encoder: 40ms period
-            services[3].execution_rate_hz = 20.0    # slam_toolbox: 50ms period
-            services[4].execution_rate_hz = 18.0    # robot_localization: 55ms period
-            services[5].execution_rate_hz = 15.0    # pure_pursuit: 67ms period
-            services[6].execution_rate_hz = 20.0    # emergency_stop: 50ms period
-            # Apply random variation to all compute services
-            for i in range(1, 7):
-                services[i].execution_rate_hz *= random.uniform(0.95, 1.05)
-        
-        elif scenario_name == "heavy_exec":
-            # Long execution times - stresses latency constraints
-            services[1].execution_rate_hz = 10.0    # imu
-            services[2].execution_rate_hz = 8.0     # encoder
-            services[3].execution_rate_hz = 9.0     # slam_toolbox
-            services[4].execution_rate_hz = 10.0    # robot_localization: longer exec time
-            services[5].execution_rate_hz = 8.0     # pure_pursuit: longer exec time
-            services[6].execution_rate_hz = 10.0    # emergency_stop: longer exec time
-            # Increase execution times for higher-level services
-            services[4].containers[0].exec_time = 0.015  # robot_localization
-            services[5].containers[0].exec_time = 0.012  # pure_pursuit
-            services[6].containers[0].exec_time = 0.030  # emergency_stop (higher GPU latency)
-            # Apply random variation to all compute services
-            for i in range(1, 7):
-                services[i].execution_rate_hz *= random.uniform(0.95, 1.05)
-        
-        elif scenario_name == "light_load":
-            # Low rates - opportunity for energy optimization (matches compare script T=25-30min)
-            baseline_rates = [10.0, 10.0, 7.0, 10.0, 10.0, 10.0]
-            for i in range(1, 7):
-                services[i].execution_rate_hz = baseline_rates[i-1] * 0.5 * random.uniform(0.95, 1.05)
-    
+        import copy as _copy
+        if not hasattr(svc, '_baseline_rate'):
+            svc._baseline_rate = svc.execution_rate_hz
+        if not hasattr(svc, '_baseline_usage'):
+            svc._baseline_usage = _copy.deepcopy(getattr(svc, 'instance_usage_by_node', {}) or {})
+        svc.execution_rate_hz = svc._baseline_rate * rate_factor
+        for c in svc.containers:
+            if not hasattr(c, '_baseline_exec_time'):
+                c._baseline_exec_time = c.exec_time
+            c.exec_time = None if c._baseline_exec_time is None else c._baseline_exec_time * exec_factor
+        if svc._baseline_usage:
+            usage = {}
+            for nid, u in svc._baseline_usage.items():
+                u = dict(u)
+                if u.get('exec_time_max') is not None:
+                    u['exec_time_max'] = u['exec_time_max'] * exec_factor
+                if u.get('execution_rate_hz_max') is not None:
+                    u['execution_rate_hz_max'] = u['execution_rate_hz_max'] * rate_factor
+                usage[nid] = u
+            svc.instance_usage_by_node = usage
+
+    # Service-level load patterns used in training: (rate factor, execution-time factor)
+    SERVICE_SCENARIOS = {
+        "normal": (1.0, 1.0),
+        "peak_traffic": (1.5, 1.0),        # rates of phase II of the evaluation
+        "stress_test": (2.0, 1.0),
+        "increased_workload": (1.0, 1.2),  # execution times of phase III
+        "extreme_rate": (2.5, 1.0),
+        "heavy_exec": (1.0, 1.5),
+        "light_load": (0.5, 1.0),          # rates of phase V
+    }
+
+    @staticmethod
+    def apply_service_scenario(services, scenario_name):
+        """Apply a service-level load pattern to every service (rates and execution times,
+        including the per-node measurements), with +-5% variation per service."""
+        rate_f, exec_f = TrainUtils.SERVICE_SCENARIOS.get(scenario_name, (1.0, 1.0))
+        for svc in services:
+            TrainUtils.scale_service_load(svc, rate_f * random.uniform(0.95, 1.05), exec_f)
+
     @staticmethod
     def build_services():
         services = [

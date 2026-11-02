@@ -126,6 +126,7 @@
       <prop id="power.motor.max" value="24.0" />
       <prop id="layer" value="edge" />
       <prop id="gpu.count" value="1" />
+      <prop id="gpu.shared" value="true" />
       <prop id="schedulable" value="false" />
       <prop id="debug.cpu_used" value="0.000" />
       <prop id="debug.ram_used_gb" value="0.000" />
@@ -141,6 +142,7 @@
       <prop id="power.motor.max" value="24.0" />
       <prop id="layer" value="edge" />
       <prop id="gpu.count" value="1" />
+      <prop id="gpu.shared" value="true" />
       <prop id="schedulable" value="true" />
       <prop id="debug.cpu_used" value="1.092" />
       <prop id="debug.ram_used_gb" value="2.747" />
