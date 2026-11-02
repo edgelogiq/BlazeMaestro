@@ -85,7 +85,9 @@ class AutoEncoderOrchestrator(BaseOrchestrator):
         self._model: Any = None
         self._optimizer: Any = None
         self._scheduler: Any = None
-        self.use_amp = bool(self._torch and self._device is not None and getattr(self._device, "type", "cpu") == "cuda")
+        # Mixed precision is disabled: with the unnormalized input features (up to ~10^2-10^3),
+        # float16 training on CUDA collapsed the decoder to a constant output.
+        self.use_amp = False
         self._scaler = self._torch.amp.GradScaler("cuda") if self.use_amp else None
         if self.use_amp:
             try:
