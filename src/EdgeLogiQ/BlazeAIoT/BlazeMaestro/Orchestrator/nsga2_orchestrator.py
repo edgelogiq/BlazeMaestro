@@ -19,21 +19,9 @@ class NSGA2Orchestrator(BaseNSGA2Orchestrator):
         population = []
         attempts = 0
         while len(population) < self.population_size:
-            assignment = []
-            for s_idx, svc in enumerate(self.services):
-                locked_nid = getattr(svc, 'locked_node_id', None)
-                locked_layer = getattr(svc, 'locked_layer_id', None)
-                
-                if locked_nid is not None:
-                    # Node lock takes precedence
-                    node_idx = next((i for i, n in enumerate(self.nodes) if str(getattr(n, 'node_id', '')) == str(locked_nid)), 0)
-                    assignment.append(node_idx)
-                elif locked_layer is not None:
-                    # Layer lock: find first node in that layer
-                    node_idx = next((i for i, n in enumerate(self.nodes) if getattr(n, 'layer_id', None) == locked_layer), 0)
-                    assignment.append(node_idx)
-                else:
-                    assignment.append(random.randint(0, self.num_nodes - 1))
+            # Randomized near-feasible sampling: each service draws among the nodes allowed by
+            # its locks, layers and GPU need; capacity and period are then checked as a whole.
+            assignment = [random.choice(self._allowed_nodes(s_idx)) for s_idx in range(self.num_services)]
             attempts += 1
             if self._is_assignment_valid(assignment):
                 population.append(assignment)
@@ -87,10 +75,36 @@ class NSGA2Orchestrator(BaseNSGA2Orchestrator):
                 # Don't mutate further for layer-locked services
                 continue
             
-            # Only mutate unlocked services
+            # Only mutate unlocked services, to a node allowed by their layers and GPU need
             if random.random() < mutation_rate:
-                assignment[i] = random.randint(0, self.num_nodes - 1)
+                assignment[i] = random.choice(self._allowed_nodes(i))
         return assignment
+
+    def _allowed_nodes(self, s_idx: int) -> List[int]:
+        """Node indices compatible with the locks, allowed layers and GPU need of a service."""
+        cache = getattr(self, '_allowed_cache', None)
+        if cache is None or cache[0] is not self.services:
+            cache = self._allowed_cache = (self.services, {})
+        if s_idx in cache[1]:
+            return cache[1][s_idx]
+        svc = self.services[s_idx]
+        locked_nid = getattr(svc, 'locked_node_id', None)
+        locked_layer = getattr(svc, 'locked_layer_id', None)
+        layers = getattr(svc, 'layers', []) if getattr(svc, 'multi_layer', False) else []
+        gpu = sum(float(getattr(c, 'gpu_gb', 0.0) or 0.0) for c in getattr(svc, 'containers', []))
+        allowed = []
+        for j, n in enumerate(self.nodes):
+            if locked_nid is not None and str(getattr(n, 'node_id', '')) != str(locked_nid):
+                continue
+            if locked_layer is not None and getattr(n, 'layer_id', None) != locked_layer:
+                continue
+            if layers and getattr(n, 'layer_id', None) not in layers:
+                continue
+            if gpu > 0 and (float(n.gpu.capacity) if getattr(n, 'gpu', None) else 0.0) < gpu:
+                continue
+            allowed.append(j)
+        cache[1][s_idx] = allowed or list(range(self.num_nodes))
+        return cache[1][s_idx]
 
     def _generate_offspring(self, population: List[List[int]]) -> List[List[int]]:
         """Generate offspring through crossover and mutation.
